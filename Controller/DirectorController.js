@@ -1,18 +1,18 @@
 import model from "../Models/DirectorModel.js";
 
 const DirectorFormDisAll = async (req, res) => {
-    const code = req.user.EmployeeCode;
-    const deptCode = await model.allDeptCode(code);
-    const deptCodesArray = deptCode[0].DeptCode.split(',');
     try {
-        const result = await model.getAllDirector();
-        const filteredResults = result.filter(item => deptCodesArray.includes(item.PrimaryDept));
-        return res.status(200).json(filteredResults);
+        const code = req.user.EmployeeCode;
+        if (!code) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        const result = await model.getAllDirector(code);
+        return res.status(200).json(result.recordset);
     } catch (error) {
         console.error('Error in DirectorFormDisAll:', error);
         return res.status(500).json({ msg: 'An error occurred while fetching director data.' });
     }
-}
+};
 
 const FormDisDirectorIRF = async (req, res) => {
     try {
