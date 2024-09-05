@@ -21,7 +21,7 @@ const DisplayDash = async () => {
         LEFT JOIN
             testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
 		WHERE 
-			IRD.QAStatus = '1'
+			IRD.QAStatus = '1' AND IRS.SubjectCode != 'others'
         ORDER BY
             IRD.DateTimeCreated DESC;
         `;

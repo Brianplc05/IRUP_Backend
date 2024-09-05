@@ -41,6 +41,8 @@ const getAll = async () => {
             FROM
                 testdb..IRHRNote
         ) IRN ON IRD.IRNo = IRN.IRNo
+        WHERE
+            IRS.SubjectCode != 'others'
         ORDER BY
             IRD.HRStatus DESC,
             IRD.DateTimeCreated DESC;

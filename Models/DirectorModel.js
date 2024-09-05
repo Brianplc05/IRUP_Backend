@@ -1,79 +1,57 @@
 import config from "../Configuration/config.js";
 import sql from "mssql";
 
-const allDeptCode = async (EmployeeCode) => {
+const getAllDirector = async (EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
-        
-        request.input('EmployeeCode', sql.VarChar, EmployeeCode);
-        const query = 'SELECT DeptCode FROM testdb..DirectorUser WHERE EmployeeCode = @EmployeeCode;';
-        
-        const result = await request.query(query);
-        return result.recordset;
-    } catch (error) {
-        console.error('Error executing SQL query in allDeptCode:', error);
-        throw error;
-    }
-};
 
-const getAllDirector = async () => {
-    try {
-    
-        const pool = await sql.connect(config.pool);
-        const request = pool.request();
-        
         const sqlQuery = `
-        SELECT
-            IRD.IRNo,
-            IRD.lostRec,
-                CASE
-                    WHEN IRS.SubjectName IS NULL THEN IRO.SpecifiedName
-                    ELSE IRS.SubjectName
-                END AS SubjectName,
-            IRI.PrimaryDept,
-            D.description AS Department_Description,
-            US.FullName AS TransferFullName,
-                CASE
-                    WHEN US1.FullName IS NULL THEN 'BAYOG, VANGERINE DE MESA.'
-                    ELSE US1.FullName
-                END AS MainFullName
-        FROM
-            testdb..IRDetailss IRD
-        LEFT JOIN
-            [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
-        LEFT JOIN
-            testdb..IRDeptInvolved id ON IRD.IRNo = id.IRNo
-        LEFT JOIN 
-            testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
-        LEFT JOIN 
-            testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
-        LEFT JOIN 
-            testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
-        LEFT JOIN 
-            testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
-        LEFT JOIN 
-            testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
-        LEFT JOIN 
-            testdb..IRDeptInvolved IRI ON IRD.IRNo = IRI.IRNo
-        LEFT JOIN 
-			testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
-        WHERE 
-            IRD.QAStatus = '1'
-        ORDER BY
-            CASE WHEN IRD.lostRec IS NULL THEN 0 ELSE 1 END,
-            IRD.DateTimeCreated DESC;`;
-        
+            SELECT
+                IRD.IRNo,
+                IRD.lostRec,
+                IRS.SubjectName AS SubjectName,
+                IRI.PrimaryDept,
+                D.description AS Department_Description,
+                US.FullName AS TransferFullName,
+                US1.FullName AS MainFullName
+            FROM
+                testdb..IRDetailss IRD
+            LEFT JOIN
+                [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
+            LEFT JOIN
+                testdb..IRDeptInvolved IRI ON IRD.IRNo = IRI.IRNo
+            LEFT JOIN 
+                testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+            LEFT JOIN 
+                testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+            LEFT JOIN 
+                testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
+            LEFT JOIN 
+                testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
+            LEFT JOIN 
+                testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
+            LEFT JOIN 
+                testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
+            LEFT JOIN 
+                testdb..DirectorUser DU ON IRI.PrimaryDept = DU.DeptCode
+            WHERE 
+                IRD.QAStatus = '1'
+                AND IRS.SubjectCode != 'others' 
+                AND DU.EmployeeCode = @EmployeeCode
+            ORDER BY
+                CASE WHEN IRD.lostRec IS NULL THEN 0 ELSE 1 END,
+                IRD.DateTimeCreated DESC;
+        `;
+
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
         const result = await request.query(sqlQuery);
-        return result.recordset; 
+        return result; 
     } catch (error) {
         console.error('Error executing SQL query in getAllDirector:', error);
         throw error;
     }
 };
-
-
-
 
 const getIREPORT = async (IRNo) => {
     try {
@@ -151,6 +129,5 @@ const DirectorLostRec = async (IRNo, lostRec, FinancialLiability) => {
 export default{
     getAllDirector,
     DirectorLostRec,
-    getIREPORT,
-    allDeptCode
+    getIREPORT
 }
