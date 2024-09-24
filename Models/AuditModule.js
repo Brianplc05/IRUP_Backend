@@ -10,14 +10,8 @@ const getTab = async () => {
             SELECT 
                 i.IRNo, 
                 us.FullName AS TransferFullName,
-                CASE
-                    WHEN us1.FullName IS NULL THEN 'BAYOG, VANGERINE DE MESA.'
-                    ELSE us1.FullName
-                END AS MainFullName,
-                CASE
-                    WHEN irs.SubjectName IS NULL THEN iro.SpecifiedName
-                    ELSE irs.SubjectName
-                END AS SubjectName,
+                us1.FullName AS MainFullName,
+                irs.SubjectName,
                 d.description AS Department_Description, 
                 i.AuditStatus 
 
@@ -28,7 +22,6 @@ const getTab = async () => {
             LEFT JOIN testdb..IRQATransfer irt ON i.IRNo = irt.IRNo
             LEFT JOIN testdb..IRSubjectName irs1 ON irt.SubjectCode = irs1.SubjectCode
             LEFT JOIN testdb..Users us ON irt.EmpTransfer = us.EmployeeCode
-            LEFT JOIN testdb..IROtherSubjectName iro ON i.IRNo = iro.IRNo
             WHERE
                 IRS.SubjectCode != 'others'
 

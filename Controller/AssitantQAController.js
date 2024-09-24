@@ -115,7 +115,6 @@ const FormUpdateSubCode = async (req, res) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
         const { IRNo, SubjectCode } = req.body.params;
-        console.log(req.body)
         const result = await model.UpdateSubjectCode(IRNo, SubjectCode, EmUpdSubCode);
 
         const records = result.recordset;

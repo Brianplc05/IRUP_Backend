@@ -7,12 +7,19 @@ const DirectorFormDisAll = async (req, res) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
         const result = await model.getAllDirector(code);
+        if (result.recordset.length === 0) {
+            const headResult = await model.getAllHead(code);
+            console.log(headResult.recordset)
+            return res.status(200).json(headResult.recordset);
+        }
+        console.log(result.recordset)
         return res.status(200).json(result.recordset);
     } catch (error) {
         console.error('Error in DirectorFormDisAll:', error);
         return res.status(500).json({ msg: 'An error occurred while fetching director data.' });
     }
 };
+
 
 const FormDisDirectorIRF = async (req, res) => {
     try {

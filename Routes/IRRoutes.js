@@ -31,7 +31,7 @@ router.get("/DisplayTotalActionItem", ReportController.FormDisTotalAct);
 //////////////////////////////////////
 
 /////////////DIRECTORTABLE///////////
-router.get("/DisplayDirectorForm", verifyToken, DirectorController.DirectorFormDisAll); 
+router.get("/DisplayDirectorForm",  verifyToken, DirectorController.DirectorFormDisAll); 
 router.get("/DisplayDirectorIRP", DirectorController.FormDisDirectorIRF); 
 router.put("/AddRecommendationDirector", DirectorController.FormDirectorRecommendation);
 //////////////////////////////////////
@@ -101,13 +101,13 @@ router.put("/Putaudit", AuditController.FormAuditSta);
 ////////////////////////////////////////
 
 
-// function runSendEmailRouteEvery12Hours() {
-//     setInterval(() => {
-//         // Call the route handler
-//         QAController.sendEmail();
-//     }, 1000); // Check every 1 second
-// }
+function runSendEmailRouteEvery12Hours() {
+    setInterval(() => {
+        // Call the route handler
+        QAController.sendEmail();
+    }, 1000); // Check every 1 second
+}
 
-// runSendEmailRouteEvery12Hours();
+runSendEmailRouteEvery12Hours();
 
 export default router ;

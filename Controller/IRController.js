@@ -78,7 +78,10 @@ const FormIncident = async (req, res) => {
         );
 
         // Accessing the first record in the recordset array
+       
+
         const records = result.recordset;
+        console.log(records)
         for (const record of records) {
             const { IRNo, FULLNAME, SubjectName, UERMEmail, FULLNAME1, UERMEmail1, Division, SubjectBriefDes } = record;
 

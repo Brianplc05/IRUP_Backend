@@ -10,15 +10,9 @@ const getAll = async () => {
         SELECT
             IRD.IRNo,
             US.FullName AS TransferFullName,
-                CASE
-                    WHEN US1.FullName IS NULL THEN 'BAYOG, VANGERINE DE MESA.'
-                    ELSE US1.FullName
-                END AS MainFullName,
+            US1.FullName AS MainFullName,
             IRD.DeptCode AS Department_Code,
-                CASE
-                    WHEN IRS.SubjectName IS NULL THEN IRO.SpecifiedName
-                    ELSE IRS.SubjectName
-                END AS SubjectName,
+            IRS.SubjectName,
             IRD.RCA,
             IRD.lostRec,
             IRD.FinancialLiability,
@@ -33,7 +27,6 @@ const getAll = async () => {
         LEFT JOIN testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
         LEFT JOIN testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
         LEFT JOIN testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
-        LEFT JOIN testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
         LEFT JOIN (
             SELECT
                 newHRNote,
@@ -86,10 +79,7 @@ const getHRIREPORT = async (IRNo) => {
         const select = `
         SELECT 
             IRD.IRNo,
-                CASE
-                    WHEN IRS.SubjectName IS NULL THEN IRO.SpecifiedName
-                    ELSE IRS.SubjectName
-                END AS SubjectName,
+            IRS.SubjectName,
             IRD.SubjectDate,
             IRD.SubjectTime,
             IRD.SubjectLoc,
@@ -132,7 +122,6 @@ const getHRIREPORT = async (IRNo) => {
                     testdb..IRActionItems
                 GROUP BY IRNo
             ) IRA ON IRD.IRNo = IRA.IRNo
-        LEFT JOIN testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
         WHERE
             IRD.IRNo = @IRNo;
         `;

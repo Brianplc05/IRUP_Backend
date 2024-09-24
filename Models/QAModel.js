@@ -32,7 +32,6 @@ const getAllQA = async (EmployeeCode) => {
                 LEFT JOIN testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
                 LEFT JOIN testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
                 LEFT JOIN testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
-                LEFT JOIN testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
                 LEFT JOIN (
                     SELECT 
                         IRNo,
@@ -101,7 +100,6 @@ const getIREPORT = async (IRNo) => {
                     testdb..IRActionItems
                 GROUP BY IRNo
             ) IRA ON IRD.IRNo = IRA.IRNo
-            LEFT JOIN testdb..IROtherSubjectName IRO ON IRD.IRNo = IRO.IRNo
             WHERE
                 IRD.IRNo = @IRNo;
         `;
@@ -154,8 +152,6 @@ const IRQA = async (IRNo, PrimaryDept, DeptCodeInv) => {
             testdb..IRSubjectName irsn ON irt.SubjectCode = irsn.SubjectCode
         LEFT JOIN 
             [UE Database]..vw_Employees e ON irt.EmpTransfer = e.CODE
-		LEFT JOIN 
-			testdb..IROtherSubjectName iro ON i.IRNo = iro.IRNo
         WHERE i.IRNo = @IRNo;        
         `;
     
@@ -364,7 +360,6 @@ const selectApprovedRCA = async (IRNo) => {
             LEFT JOIN testdb..IRDeptInvolved ird ON ira.IRNo = ird.IRNo
             LEFT JOIN testdb..IREmail ire1 ON ird.PrimaryDept = ire1.DeptCode
             LEFT JOIN testdb..Users us ON irs.EmployeeCode = us.EmployeeCode
-            LEFT JOIN testdb..IROtherSubjectName iro ON ira.IRNo = iro.IRNo
             WHERE ira.IRNo = @IRNo
         `;
         
@@ -414,8 +409,6 @@ const disapprovedRCA = async (IRNo, newConclusion) => {
             testdb..IREmail e ON ird.PrimaryDept = e.DeptCode
 		LEFT JOIN 
             testdb..Users us ON irs.EmployeeCode = us.EmployeeCode
-        LEFT JOIN 
-			testdb..IROtherSubjectName iro ON irc.IRNo = iro.IRNo
         WHERE irc.IRNo = @IRNo`;
 
         return await request.query(insertRCADisapproved);
@@ -558,55 +551,55 @@ const QAStatus = async ( IRNo, QAStatus) => {
             }
 }
 
-// const getTime = async () => {
-//     try {
-//         const pool = await sql.connect(config.pool);
-//         const request = pool.request();
+const getTime = async () => {
+    try {
+        const pool = await sql.connect(config.pool);
+        const request = pool.request();
 
-//         const result = await request.query(`
-//         SELECT  
-//             i.IRNo, 
-//             i.DateTimeCreated, 
-//             i.DateTimeRCAUpdated, 
-//             irs.SubjectName AS SubjectName,
-//             ue.UERMEmail AS QAEmail,
-//             ue.FULLNAME,
-//             i.SendEmailCounts
-//         FROM 
-//             testdb..IRDetailss i
-//         LEFT JOIN testdb..IRDeptInvolved id ON i.IRNo = id.IRNo
-//         LEFT JOIN testdb..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode 
-//         LEFT JOIN [UE Database]..vw_Employees ue ON irs.EmployeeCode = ue.CODE
-//         WHERE i.SubjectCode <> 'others'
-//         AND i.DateTimeRCAUpdated IS NULL;
-//         `);
-//         return result;
-//     } catch (error) {
-//         console.error('Error executing SQL query:', error);
-//         throw error;
-//     }
-// }
+        const result = await request.query(`
+        SELECT
+            i.IRNo, 
+            i.DateTimeCreated, 
+            i.DateTimeRCAUpdated, 
+            irs.SubjectName AS SubjectName,
+            ue.UERMEmail AS QAEmail,
+            ue.FULLNAME,
+            i.SendEmailCounts
+        FROM 
+            testdb..IRDetailss i
+        LEFT JOIN testdb..IRDeptInvolved id ON i.IRNo = id.IRNo
+        LEFT JOIN testdb..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode 
+        LEFT JOIN [UE Database]..vw_Employees ue ON irs.EmployeeCode = ue.CODE
+        WHERE i.SubjectCode <> 'others'
+        AND i.DateTimeRCAUpdated IS NULL;
+        `);
+        return result;
+    } catch (error) {
+        console.error('Error executing SQL query:', error);
+        throw error;
+    }
+}
 
-// const updateSendEmailCounts = async (IRNo, SendEmailCounts) => {
-//     try {
-//         const pool = await sql.connect(config.pool);
-//         const request = pool.request();
+const updateSendEmailCounts = async (IRNo, SendEmailCounts) => {
+    try {
+        const pool = await sql.connect(config.pool);
+        const request = pool.request();
         
-//         const updateQuery = `
-//             UPDATE IRDetailss
-//             SET SendEmailCounts = @SendEmailCounts
-//             WHERE IRNo = @IRNo`;
+        const updateQuery = `
+            UPDATE IRDetailss
+            SET SendEmailCounts = @SendEmailCounts
+            WHERE IRNo = @IRNo`;
                     
-//         request.input('IRNo', sql.NVarChar, IRNo);
-//         request.input('SendEmailCounts', sql.Int, SendEmailCounts);  // Changed to Int assuming it's a count
+        request.input('IRNo', sql.NVarChar, IRNo);
+        request.input('SendEmailCounts', sql.Int, SendEmailCounts);  // Changed to Int assuming it's a count
 
-//         const result = await request.query(updateQuery);
-//         return result;
-//     } catch (error) {
-//         console.error('Error executing SQL query:', error);
-//         throw error;
-//     }
-// }
+        const result = await request.query(updateQuery);
+        return result;
+    } catch (error) {
+        console.error('Error executing SQL query:', error);
+        throw error;
+    }
+}    
 
 
 export default{
@@ -628,7 +621,7 @@ export default{
     QAStatus,
     getPendingRemarks,
     IRPendingRem,
-    // getTime,
-    // updateSendEmailCounts
+    getTime,
+    updateSendEmailCounts
     
 }

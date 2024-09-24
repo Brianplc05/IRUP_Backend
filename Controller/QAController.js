@@ -464,85 +464,85 @@ const FormQADoneStatus = async (req, res) => {
     }
 }
 
-// const sendEmail = async () => {
-//     try {
-//         const result = await model.getTime();
-//         const records = result.recordset;
-//         for (const record of records) {
-//             const IRNo = record.IRNo; 
-//             const FullName = record.FULLNAME;
-//             const SubjectName = record.SubjectName;
-//             const QAEmail = record.QAEmail;
-//             const timeRcaUpdate = record.DateTimeRCAUpdated;
-//             const SendEmailCounts = record.SendEmailCounts
+const sendEmail = async () => {
+    try {
+        const result = await model.getTime();
+        const records = result.recordset;
+        for (const record of records) {
+            const IRNo = record.IRNo; 
+            const FullName = record.FULLNAME;
+            const SubjectName = record.SubjectName;
+            const QAEmail = record.QAEmail;
+            const timeRcaUpdate = record.DateTimeRCAUpdated;
+            const SendEmailCounts = record.SendEmailCounts
 
-//             if (!timeRcaUpdate) {
-//                 const currentDateTime = new Date();
-//                 const IRDTCreated = new Date(record.DateTimeCreated);
-//                 const differenceInMinutes = Math.abs(currentDateTime - IRDTCreated) / 3600000;
+            if (!timeRcaUpdate) {
+                const currentDateTime = new Date();
+                const IRDTCreated = new Date(record.DateTimeCreated);
+                const differenceInMinutes = Math.abs(currentDateTime - IRDTCreated) / 3600000;
 
-//                 if (differenceInMinutes >= 12 && SendEmailCounts === null) {
-//                     await model.updateSendEmailCounts(IRNo, 1);
-//                     await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
-//                     console.log('Email sent successfully in 12hours');
-//                 }
+                if (differenceInMinutes >= 12 && SendEmailCounts === null) {
+                    await model.updateSendEmailCounts(IRNo, 1);
+                    await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
+                    console.log('Email sent successfully in 12hours');
+                }
 
-//                 if (differenceInMinutes >= 24 && SendEmailCounts === 1) {
-//                     await model.updateSendEmailCounts(IRNo, 2);
-//                     await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
-//                     console.log('Email sent successfully in 24hours');
-//                 }
+                if (differenceInMinutes >= 24 && SendEmailCounts === 1) {
+                    await model.updateSendEmailCounts(IRNo, 2);
+                    await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
+                    console.log('Email sent successfully in 24hours');
+                }
 
-//                 if (differenceInMinutes >= 36 && SendEmailCounts === 2) {
-//                     await model.updateSendEmailCounts(IRNo, 3);
-//                     await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
-//                     console.log('Email sent successfully in 36hours');
-//                 }
+                if (differenceInMinutes >= 36 && SendEmailCounts === 2) {
+                    await model.updateSendEmailCounts(IRNo, 3);
+                    await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
+                    console.log('Email sent successfully in 36hours');
+                }
 
-//                 if (differenceInMinutes >= 48 && SendEmailCounts === 3) {
-//                     await model.updateSendEmailCounts(IRNo, 4);
-//                     await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
-//                     console.log('End of sending Email within 48hours');
-//                 }
-//                 if (SendEmailCounts === 4) {
-//                     return;
-//                 }
-//             }
-//         }
-//     } catch (error) {
-//         console.error('Error in sendEmail:', error);
-//     }
-// };
+                if (differenceInMinutes >= 48 && SendEmailCounts === 3) {
+                    await model.updateSendEmailCounts(IRNo, 4);
+                    await PendingEmail(QAEmail, FullName, IRNo, SubjectName);
+                    console.log('End of sending Email within 48hours');
+                }
+                if (SendEmailCounts === 4) {
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error in sendEmail:', error);
+    }
+};
 
-// async function PendingEmail(QAEmail, FullName, IRNo, SubjectName) {
-//     if (QAEmail) {
-//         const emailContent = {
-//             subject: "PENDING INCIDENT REPORT",
-//             header: `<div style="background-color: #FFC412; color: darkgray; padding: 15px; height:20px">
-//                         PENDING INCIDENT REPORT
-//                     </div>`,
-//             content: `Dear ${FullName} <br/>
-//                 We've detected a pending Incident Report that requires your immediate attention. Please log in to your account and review the report to take the necessary actions.
-//                 <br/>
-//                 <br/>
-//                 <b>Details:</b>
-//                 <br/>
-//                 <b>IR Number:</b> ${IRNo}
-//                 <br/>
-//                 <b>Subject of the Incident:</b> ${SubjectName}
-//                 <br/>
-//                 <br/>
-//                 Please ensure that you review and address the report as soon as possible to maintain compliance and ensure timely resolution.
-//                 <br/>
-//                 Thank you for your prompt attention to this matter.
-//                 <div style="background-color: red; height: 10px"/>
-//                 ${QAEmail}`,
-//             email: 'jppalacio@uerm.edu.ph',
-//             name: 'JOHN BRIAN'
-//         };
-//         await util.sendEmail(emailContent);
-//     }
-// }
+async function PendingEmail(QAEmail, FullName, IRNo, SubjectName) {
+    if (QAEmail) {
+        const emailContent = {
+            subject: "PENDING INCIDENT REPORT",
+            header: `<div style="background-color: #FFC412; color: darkgray; padding: 15px; height:20px">
+                        PENDING INCIDENT REPORT
+                    </div>`,
+            content: `Dear ${FullName} <br/>
+                We've detected a pending Incident Report that requires your immediate attention. Please log in to your account and review the report to take the necessary actions.
+                <br/>
+                <br/>
+                <b>Details:</b>
+                <br/>
+                <b>IR Number:</b> ${IRNo}
+                <br/>
+                <b>Subject of the Incident:</b> ${SubjectName}
+                <br/>
+                <br/>
+                Please ensure that you review and address the report as soon as possible to maintain compliance and ensure timely resolution.
+                <br/>
+                Thank you for your prompt attention to this matter.
+                <div style="background-color: red; height: 10px"/>
+                ${QAEmail}`,
+            email: 'jppalacio@uerm.edu.ph',
+            name: 'JOHN BRIAN'
+        };
+        await util.sendEmail(emailContent);
+    }
+}
 
 
 
@@ -562,6 +562,5 @@ export {
     FormPendingRemarks,
     FormPostPendingRemarks,
     FormQADoneStatus,
-    // FormQARefferal,
-    // sendEmail
+    sendEmail
 }

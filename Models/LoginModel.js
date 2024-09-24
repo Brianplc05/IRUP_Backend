@@ -20,6 +20,7 @@ const getUser = async (EmployeeCode) => {
                             [UE database]..Employee E
                         LEFT JOIN 
                             [UE Database]..Department D ON E.DeptCode = D.DeptCode
+                        
                         WHERE 
                             E.EmployeeCode = @EmployeeCode;`
         const result = await request.query(query);
