@@ -147,7 +147,7 @@ const getIREPORT = async (IRNo) => {
     }
 }
 
-const DirectorLostRec = async (IRNo, lostRec, FinancialLiability) => {
+const DirectorLostRec = async (IRNo, lostRec, FinancialLiability, LostRecUpdatedBy) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
@@ -155,11 +155,14 @@ const DirectorLostRec = async (IRNo, lostRec, FinancialLiability) => {
         request.input('IRNo', sql.NVarChar, IRNo);
         request.input('lostRec', sql.Int, lostRec);
         request.input('FinancialLiability', sql.NVarChar, FinancialLiability);
+        request.input('LostRecUpdatedBy', sql.NVarChar, LostRecUpdatedBy);
 
         const insertDirectorLostRec = `
         UPDATE IRDetailss
         SET lostRec = @lostRec,
-        FinancialLiability = @FinancialLiability
+        FinancialLiability = @FinancialLiability,
+        LostRecUpdatedBy = @LostRecUpdatedBy,
+        LostRecDateTimeCreated =  GETDATE()
         WHERE IRNo = @IRNo`;
 
         const result = await request.query(insertDirectorLostRec);

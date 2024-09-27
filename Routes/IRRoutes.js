@@ -13,11 +13,11 @@ import * as AuditController from "../Controller/AuditController.js";
 const router = Router();
 
 ////IRFORM/////
-router.get("/EmpdeptForm", IRController.FormEmdept); 
-router.get("/SubNameForm", IRController.FormSubName);  
-router.get("/SubCategoryForm", IRController.FormSubCategory);
-router.get("/DivisionForm", IRController.FormDivision);
-router.post("/AddIncident", IRController.FormIncident);
+router.get("/EmpdeptForm", verifyToken, IRController.FormEmdept); 
+router.get("/SubNameForm", verifyToken, IRController.FormSubName);  
+router.get("/SubCategoryForm", verifyToken, IRController.FormSubCategory);
+router.get("/DivisionForm", verifyToken, IRController.FormDivision);
+router.post("/AddIncident", verifyToken, IRController.FormIncident);
 ////////////////////////////////////////
 
 /////////////DASHBOARD///////////
@@ -32,17 +32,17 @@ router.get("/DisplayTotalActionItem", ReportController.FormDisTotalAct);
 
 /////////////DIRECTORTABLE///////////
 router.get("/DisplayDirectorForm",  verifyToken, DirectorController.DirectorFormDisAll); 
-router.get("/DisplayDirectorIRP", DirectorController.FormDisDirectorIRF); 
-router.put("/AddRecommendationDirector", DirectorController.FormDirectorRecommendation);
+router.get("/DisplayDirectorIRP", verifyToken, DirectorController.FormDisDirectorIRF); 
+router.put("/AddRecommendationDirector", verifyToken, DirectorController.FormDirectorRecommendation);
 //////////////////////////////////////
 
 /////////////ASSISTANTQA TABLE///////////
 router.get("/DisplayAssistantQASub", verifyToken, AssitantQAController.FormAssistantQASub);
-router.get("/DisplayAQA", AssitantQAController.FormDisAQA); 
-router.get("/DisplaySubjectCode", AssitantQAController.FormDisSubject); 
-router.get("/DisplayDivisionCode", AssitantQAController.FormDisDivision); 
+router.get("/DisplayAQA", verifyToken, AssitantQAController.FormDisAQA); 
+router.get("/DisplaySubjectCode", verifyToken, AssitantQAController.FormDisSubject); 
+router.get("/DisplayDivisionCode", verifyToken, AssitantQAController.FormDisDivision); 
 router.put("/PutSubjectCode", verifyToken, AssitantQAController.FormUpdateSubCode);
-router.put("/PutDivisionCode", AssitantQAController.FormUpdateDivCode);
+router.put("/PutDivisionCode", verifyToken, AssitantQAController.FormUpdateDivCode);
 //////////////////////////////////////
 
 

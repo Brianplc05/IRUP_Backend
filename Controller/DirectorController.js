@@ -9,10 +9,8 @@ const DirectorFormDisAll = async (req, res) => {
         const result = await model.getAllDirector(code);
         if (result.recordset.length === 0) {
             const headResult = await model.getAllHead(code);
-            console.log(headResult.recordset)
             return res.status(200).json(headResult.recordset);
         }
-        console.log(result.recordset)
         return res.status(200).json(result.recordset);
     } catch (error) {
         console.error('Error in DirectorFormDisAll:', error);
@@ -38,12 +36,13 @@ const FormDisDirectorIRF = async (req, res) => {
 
 const FormDirectorRecommendation = async (req, res) => {
     try {
-        const IRNo = req.body.IRNo;
-        const lostRec = req.body.lostRec;
-        const FinancialLiability = req.body.FinancialLiability;
-
-        const result = await model.DirectorLostRec(IRNo, lostRec, FinancialLiability);
-
+        
+        const {IRNo, lostRec, FinancialLiability} = req.body;
+        const code = req.user.EmployeeCode;
+        if (!code) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        const result = await model.DirectorLostRec(IRNo, lostRec, FinancialLiability, code);
         if (result.rowsAffected === 0) {
             return res.status(403).json({ body: 'FAILED TO UPDATE STATUS' });
         }

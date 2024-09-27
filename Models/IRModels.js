@@ -128,8 +128,8 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
                 WHEN IRD.SubjectCode = 'others' THEN E.UERMEmail 
                 ELSE US1.UERMEmail 
             END AS UERMEmail,
-            E1.FULLNAME AS FULLNAME1,  -- To retrieve FULLNAME1 as a separate field
-            E1.UERMEmail AS UERMEmail1, -- To retrieve UERMEmail1 as a separate field
+            E1.FULLNAME AS FULLNAME1,  
+            E1.UERMEmail AS UERMEmail1,
             IRD.SubjectBriefDes,
             IRD.SubjectDate,
             IRD.SubjectTime,
@@ -138,7 +138,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
             IRD.SubjectCause,
             IRD.SubjectResponse
         FROM 
-            testdb..IRDetailss IRD 
+            testdb..IRDetailss IRD
         LEFT JOIN 
             testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
         LEFT JOIN 
@@ -195,7 +195,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
         const uniqueNumber = Math.floor(Math.random() * 100).toString().padStart(2, '0'); // Generate a random number between 00 and 99
         return `${currentDate}-${ascNumber.toString().padStart(5, '0')}-${uniqueNumber}`;
     }
-      
+
     async function formatCode() {
         const prefix = 'CODE';
         const uniqueNumber = Math.floor(Math.random() * 1000); // Generate a random number between 0 and 999
@@ -223,6 +223,8 @@ const getIRDept = async () => {
         throw error;
     }
 }
+
+
 ////////////////////////////////////////
 
 
