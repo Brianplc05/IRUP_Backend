@@ -1,6 +1,60 @@
 import config from "../Configuration/config.js";
 import sql from "mssql";
 
+const getSuperAuditQA = async () => {
+    try {
+        const pool = await sql.connect(config.pool);
+        const request = pool.request();
+        
+        const select = `
+            SELECT
+                IRD.IRNo,
+                US.FullName AS TransferFullName,
+                US1.FullName AS MainFullName,
+                IRD.DeptCode AS Department_Code,
+                IRS.SubjectCode,
+                IRS.SubjectName,
+                IRS.EmployeeCode,
+                IRD.RCA,
+                IRD.lostRec,
+                D.description AS Department_Description,
+                IRI.PrimaryDept,
+                IRA.CombinedActionItems,
+                IRE.Dept_Desc AS Department_Involved,
+                IRD.QAStatus
+            FROM
+                IRUP..IRDetails IRD
+                LEFT JOIN IRUP..IRDeptInvolved IRI ON IRD.IRNo = IRI.IRNo
+                LEFT JOIN IRUP..IREmail IRE ON IRI.PrimaryDept = IRE.DeptCode
+                LEFT JOIN [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
+                LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+                LEFT JOIN IRUP..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+                LEFT JOIN IRUP..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
+                LEFT JOIN IRUP..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
+                LEFT JOIN IRUP..Users US ON IRT.EmpTransfer = US.EmployeeCode
+                LEFT JOIN (
+                    SELECT 
+                        IRNo,
+                        STRING_AGG(ActionStatus, ', ') AS CombinedActionItems
+                    FROM
+                        IRUP..IRActionItems
+                    GROUP BY IRNo
+                ) IRA ON IRD.IRNo = IRA.IRNo
+            WHERE
+                IRS.SubjectCode != 'others'
+            ORDER BY
+                IRD.QAStatus DESC,
+                IRD.DateTimeCreated DESC;`;
+                
+        const result = await request.query(select);
+        return result; 
+    } catch (error) {
+        console.error('Error executing SQL query:', error);
+        throw error;
+    }
+}
+
+
 const getAllQA = async (EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
@@ -23,21 +77,21 @@ const getAllQA = async (EmployeeCode) => {
                 IRE.Dept_Desc AS Department_Involved,
                 IRD.QAStatus
             FROM
-                testdb..IRDetailss IRD
-                LEFT JOIN testdb..IRDeptInvolved IRI ON IRD.IRNo = IRI.IRNo
-                LEFT JOIN testdb..IREmail IRE ON IRI.PrimaryDept = IRE.DeptCode
+                IRUP..IRDetails IRD
+                LEFT JOIN IRUP..IRDeptInvolved IRI ON IRD.IRNo = IRI.IRNo
+                LEFT JOIN IRUP..IREmail IRE ON IRI.PrimaryDept = IRE.DeptCode
                 LEFT JOIN [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
-                LEFT JOIN testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
-                LEFT JOIN testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
-                LEFT JOIN testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
-                LEFT JOIN testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
-                LEFT JOIN testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
+                LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+                LEFT JOIN IRUP..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+                LEFT JOIN IRUP..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
+                LEFT JOIN IRUP..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
+                LEFT JOIN IRUP..Users US ON IRT.EmpTransfer = US.EmployeeCode
                 LEFT JOIN (
                     SELECT 
                         IRNo,
                         STRING_AGG(ActionStatus, ', ') AS CombinedActionItems
                     FROM
-                        testdb..IRActionItems
+                        IRUP..IRActionItems
                     GROUP BY IRNo
                 ) IRA ON IRD.IRNo = IRA.IRNo
             WHERE
@@ -78,18 +132,18 @@ const getIREPORT = async (IRNo) => {
                 DeptDesc.DeptCodeInvDescriptions
                 
             FROM
-                testdb..IRDetailss IRD
-            LEFT JOIN testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+                IRUP..IRDetails IRD
+            LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
             LEFT JOIN (
                 SELECT 
                     ID.IRNo,
                     D1.Dept_Desc AS PrimaryDept,
                     STRING_AGG(D2.Dept_Desc, ', ') AS DeptCodeInvDescriptions
                 FROM 
-                    testdb..IRDeptInvolved ID
-                LEFT JOIN testdb..IREmail D1 ON ID.PrimaryDept = D1.DeptCode
+                    IRUP..IRDeptInvolved ID
+                LEFT JOIN IRUP..IREmail D1 ON ID.PrimaryDept = D1.DeptCode
                 CROSS APPLY STRING_SPLIT(ID.DeptCodeInv, ',') AS SplitDeptCode
-                LEFT JOIN testdb..IREmail D2 ON SplitDeptCode.value = D2.DeptCode
+                LEFT JOIN IRUP..IREmail D2 ON SplitDeptCode.value = D2.DeptCode
                 GROUP BY ID.IRNo, D1.Dept_Desc
             ) DeptDesc ON IRD.IRNo = DeptDesc.IRNo
             LEFT JOIN (
@@ -97,7 +151,7 @@ const getIREPORT = async (IRNo) => {
                     IRNo,
                     STRING_AGG(ActionItem, '. ') AS CombinedActionItems
                 FROM
-                    testdb..IRActionItems
+                    IRUP..IRActionItems
                 GROUP BY IRNo
             ) IRA ON IRD.IRNo = IRA.IRNo
             WHERE
@@ -113,16 +167,16 @@ const getIREPORT = async (IRNo) => {
     }
 }
 
-const IRQA = async (IRNo, PrimaryDept, DeptCodeInv) => {
+const IRQA = async (IRNo, PrimaryDept, DeptCodeInv, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
 
         const insertQueryIRDetails = `
-        INSERT INTO IRDeptInvolved (IRNo, PrimaryDept, DeptCodeInv)
-        VALUES (@IRNo, @PrimaryDept, @DeptCodeInv);
+        INSERT INTO IRDeptInvolved (IRNo, PrimaryDept, DeptCodeInv, CreatedBy , DateTimeCreated)
+        VALUES (@IRNo, @PrimaryDept, @DeptCodeInv, @EmployeeCode, GETDATE());
 
-        UPDATE testdb..IRDetailss
+        UPDATE IRUP..IRDetails
         SET RCA = '1',
             DateTimeRCAUpdated = GETDATE()
         WHERE IRNo = @IRNo;
@@ -130,7 +184,8 @@ const IRQA = async (IRNo, PrimaryDept, DeptCodeInv) => {
         SELECT TOP 1
             i.IRNo,
             i.PrimaryDept,
-            i.DeptCodeInv,	
+            i.DeptCodeInv,
+            i.DateTimeCreated,	
 			irs.SubjectCode,
             irs.SubjectName,
             u.UERMEmail,
@@ -139,23 +194,24 @@ const IRQA = async (IRNo, PrimaryDept, DeptCodeInv) => {
             d.SubjectCause,
             d.SubjectResponse
         FROM
-            testdb..IRDeptInvolved i
+            IRUP..IRDeptInvolved i
         LEFT JOIN
-            testdb..IRDetailss d ON i.IRNo = d.IRNo
+            IRUP..IRDetails d ON i.IRNo = d.IRNo
         LEFT JOIN
-            testdb..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
+            IRUP..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
         LEFT JOIN
             [UE Database]..vw_Employees u ON irs.EmployeeCode = u.CODE 
         LEFT JOIN 
-            testdb..IRQATransfer irt ON i.IRNo = irt.IRNo
+            IRUP..IRQATransfer irt ON i.IRNo = irt.IRNo
         LEFT JOIN 
-            testdb..IRSubjectName irsn ON irt.SubjectCode = irsn.SubjectCode
+            IRUP..IRSubjectName irsn ON irt.SubjectCode = irsn.SubjectCode
         LEFT JOIN 
             [UE Database]..vw_Employees e ON irt.EmpTransfer = e.CODE
         WHERE i.IRNo = @IRNo;        
         `;
     
         request.input('IRNo', sql.NVarChar, IRNo);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
         request.input('PrimaryDept', sql.NVarChar, PrimaryDept);
         request.input('DeptCodeInv', sql.NVarChar, DeptCodeInv.join(',')); // Join values with comma delimite
 
@@ -173,7 +229,7 @@ const getQAs = async () => {
         const request = pool.request();
         
         const select = `SELECT EmployeeCode, FullName
-        FROM testdb..Users
+        FROM IRUP..Users
         ORDER BY FullName ASC;
         `;
 
@@ -205,11 +261,11 @@ const putQATras = async (IRNo, SubjectCode, EmpTransfer) => {
             E.UERMEmail AS TransEmail,
             E1.FullName AS MainFullName,
             E1.UERMEmail AS MainEmail
-        FROM testdb..IRQATransfer IRQ
-        LEFT JOIN testdb..IRSubjectName IRS ON IRQ.SubjectCode = IRS.SubjectCode
+        FROM IRUP..IRQATransfer IRQ
+        LEFT JOIN IRUP..IRSubjectName IRS ON IRQ.SubjectCode = IRS.SubjectCode
         LEFT JOIN [UE Database]..vw_Employees E1 ON IRS.EmployeeCode = E1.CODE
-        LEFT JOIN testdb..IRQATransfer IRT ON IRQ.IRNo = IRT.IRNo
-        LEFT JOIN testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
+        LEFT JOIN IRUP..IRQATransfer IRT ON IRQ.IRNo = IRT.IRNo
+        LEFT JOIN IRUP..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
         LEFT JOIN [UE Database]..vw_Employees E ON IRT.EmpTransfer = E.CODE
         ORDER BY 
             IRQ.DateTimeCreated DESC;`;
@@ -228,7 +284,7 @@ const getEmail = async (DeptCode) => {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         
-        const select = `SELECT UERMEmail FROM testdb..IREmail WHERE DeptCode = @DeptCode`;
+        const select = `SELECT FullName, UERMEmail FROM IRUP..IREmail WHERE DeptCode = @DeptCode`;
         
         request.input('DeptCode', sql.NVarChar, DeptCode);
         const result = await request.query(select);
@@ -247,7 +303,7 @@ const getDirectorEmail = async (DeptCode) => {
         
         const select = `
         SELECT Fullname, UERMEmail
-        FROM testdb..DirectorUser
+        FROM IRUP..DirectorUser
         WHERE DeptCode = @DeptCode
         `;
         
@@ -270,7 +326,7 @@ const IRQARef = async (IRNo, QAReferral) => {
         request.input('QAReferral', sql.Int, QAReferral);
 
         const updateQuery = `
-            UPDATE IRDetailss
+            UPDATE IRDetails
             SET QAReferral = @QAReferral,
                 QAStatus = 0,
                 DateTimeQAUpdated = GETDATE(),
@@ -309,7 +365,7 @@ const IRReCons = async (IRNo, newConclusion) => {
     }
 };
 
-const approvedRCA = async (IRNo, ActionItem, TimelineFromDate, TimelineToDate) => {
+const approvedRCA = async (IRNo, ActionItem, TimelineFromDate, TimelineToDate, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
@@ -318,12 +374,13 @@ const approvedRCA = async (IRNo, ActionItem, TimelineFromDate, TimelineToDate) =
         request.input('ActionItem', sql.NVarChar, ActionItem);
         request.input('TimelineFromDate', sql.Date, TimelineFromDate);
         request.input('TimelineToDate', sql.Date, TimelineToDate);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
         const insertQuery = `
-        INSERT INTO IRActionItems (IRNo, ActionItem, TimelineFromDate, TimelineToDate, DateTimeCreated)
-        VALUES (@IRNo, @ActionItem, @TimelineFromDate, @TimelineToDate, GETDATE());
+        INSERT INTO IRActionItems (IRNo, ActionItem, TimelineFromDate, TimelineToDate, DateTimeCreated, CreatedBy)
+        VALUES (@IRNo, @ActionItem, @TimelineFromDate, @TimelineToDate, GETDATE(), @EmployeeCode);
         
-        UPDATE IRDetailss
+        UPDATE IRDetails
         SET RCA = '3'
         WHERE IRNo = @IRNo;
         `;
@@ -354,12 +411,12 @@ const selectApprovedRCA = async (IRNo) => {
                 us.UERMEmail AS QAEmail
                 
             FROM 
-                testdb..IRActionItems ira 
-            LEFT JOIN testdb..IRDetailss d ON ira.IRNo = d.IRNo
-            LEFT JOIN testdb..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
-            LEFT JOIN testdb..IRDeptInvolved ird ON ira.IRNo = ird.IRNo
-            LEFT JOIN testdb..IREmail ire1 ON ird.PrimaryDept = ire1.DeptCode
-            LEFT JOIN testdb..Users us ON irs.EmployeeCode = us.EmployeeCode
+                IRUP..IRActionItems ira 
+            LEFT JOIN IRUP..IRDetails d ON ira.IRNo = d.IRNo
+            LEFT JOIN IRUP..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
+            LEFT JOIN IRUP..IRDeptInvolved ird ON ira.IRNo = ird.IRNo
+            LEFT JOIN IRUP..IREmail ire1 ON ird.PrimaryDept = ire1.DeptCode
+            LEFT JOIN IRUP..Users us ON irs.EmployeeCode = us.EmployeeCode
             WHERE ira.IRNo = @IRNo
         `;
         
@@ -384,7 +441,7 @@ const disapprovedRCA = async (IRNo, newConclusion) => {
         INSERT INTO IRConclusion (IRNo, newConclusion, DateTime)
         VALUES (@IRNo, @newConclusion, GETDATE());
         
-        UPDATE IRDetailss
+        UPDATE IRDetails
         SET RCA = '2'
         WHERE IRNo = @IRNo;
         
@@ -398,17 +455,17 @@ const disapprovedRCA = async (IRNo, newConclusion) => {
             us.UERMEmail AS QAEmail
             
         FROM 
-            testdb..IRConclusion irc
+            IRUP..IRConclusion irc
         LEFT JOIN
-            testdb..IRDetailss d ON irc.IRNo = d.IRNo
+            IRUP..IRDetails d ON irc.IRNo = d.IRNo
         LEFT JOIN
-            testdb..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
+            IRUP..IRSubjectName irs ON d.SubjectCode = irs.SubjectCode
         LEFT JOIN 
-            testdb..IRDeptInvolved ird ON irc.IRNo = ird.IRNo
+            IRUP..IRDeptInvolved ird ON irc.IRNo = ird.IRNo
         LEFT JOIN 
-            testdb..IREmail e ON ird.PrimaryDept = e.DeptCode
+            IRUP..IREmail e ON ird.PrimaryDept = e.DeptCode
 		LEFT JOIN 
-            testdb..Users us ON irs.EmployeeCode = us.EmployeeCode
+            IRUP..Users us ON irs.EmployeeCode = us.EmployeeCode
         WHERE irc.IRNo = @IRNo`;
 
         return await request.query(insertRCADisapproved);
@@ -426,7 +483,7 @@ const countRcaSTA = async (CountRCA, Id) => {
                 const request = pool.request();
                 
                 const updateQuery = `
-                    UPDATE IRDetailss
+                    UPDATE IRDetails
                     SET CountReturnRCA = CountReturnRCA + @CountRCA
                     WHERE IRNo = @Id`;
                 
@@ -450,7 +507,7 @@ const DisActioItem = async (IRNo) => {
         request.input('IRNo', sql.NVarChar, IRNo);
 
         const select = `
-            SELECT * FROM testdb..IRActionItems
+            SELECT * FROM IRUP..IRActionItems
             WHERE IRNo = @IRNo;
         `;
         
@@ -462,26 +519,29 @@ const DisActioItem = async (IRNo) => {
     }
 }
 
-const AcionItemStatus = async (Id, ActionStatus) => {
-    try{
+const AcionItemStatus = async (Id, ActionStatus, EmployeeCode) => {
+    try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
 
         request.input('Id', sql.Int, Id);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
         request.input('ActionStatus', sql.Int, ActionStatus);
 
         const updateActionItem = `
         UPDATE IRActionItems
-        SET ActionStatus = @ActionStatus
+        SET ActionStatus = @ActionStatus,
+            UpdatedBy = @EmployeeCode,
+            DateTimeUpdated = GETDATE()
         WHERE Id = @Id`;
 
         const result = await request.query(updateActionItem);
         return result;
     } catch (error) {
-        console.error('Error executing SQL query:', error);
-        throw error;
+        throw error; // Just rethrowing the error without logging it
     }
-}
+};
+
 
 const getPendingRemarks = async (IRNo) => {
     try {
@@ -490,7 +550,7 @@ const getPendingRemarks = async (IRNo) => {
 
         const DispendingRem = `
         SELECT *
-        FROM testdb..IRPendingRemarks
+        FROM IRUP..IRPendingRemarks
         WHERE IRNo = @IRNo
         ORDER BY DateTimeCreated DESC
         `;
@@ -531,7 +591,7 @@ const QAStatus = async ( IRNo, QAStatus) => {
                 const request = pool.request();
                 
                 const updateQuery = `
-                    UPDATE IRDetailss
+                    UPDATE IRDetails
                     SET 
                         QAStatus = @QAStatus,
                         DateTimeQAUpdated = GETDATE()
@@ -566,9 +626,9 @@ const getTime = async () => {
             ue.FULLNAME,
             i.SendEmailCounts
         FROM 
-            testdb..IRDetailss i
-        LEFT JOIN testdb..IRDeptInvolved id ON i.IRNo = id.IRNo
-        LEFT JOIN testdb..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode 
+            IRUP..IRDetails i
+        LEFT JOIN IRUP..IRDeptInvolved id ON i.IRNo = id.IRNo
+        LEFT JOIN IRUP..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode 
         LEFT JOIN [UE Database]..vw_Employees ue ON irs.EmployeeCode = ue.CODE
         WHERE i.SubjectCode <> 'others'
         AND i.DateTimeRCAUpdated IS NULL;
@@ -586,7 +646,7 @@ const updateSendEmailCounts = async (IRNo, SendEmailCounts) => {
         const request = pool.request();
         
         const updateQuery = `
-            UPDATE IRDetailss
+            UPDATE IRDetails
             SET SendEmailCounts = @SendEmailCounts
             WHERE IRNo = @IRNo`;
                     
@@ -603,6 +663,7 @@ const updateSendEmailCounts = async (IRNo, SendEmailCounts) => {
 
 
 export default{
+    getSuperAuditQA,
     getAllQA,
     getIREPORT,
     IRQA,

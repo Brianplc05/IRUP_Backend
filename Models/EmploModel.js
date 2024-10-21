@@ -13,9 +13,9 @@ const DisplayEmplo = async () => {
                 ircd.DisciplineName, 
                 ie.DateTimeCreated,
                 ROW_NUMBER() OVER (PARTITION BY ie.IRNo ORDER BY ie.DateTimeCreated) AS RowNum
-            FROM [testdb].[dbo].[IREmployeeDem] ie
-            LEFT JOIN testdb..IRCodeDiscipline ircd ON ie.DisciplineCode = ircd.DisciplineCode
-            LEFT JOIN testdb..IRSpecificOffenses iso ON ie.SpecificOfNo = iso.SpecificOfNo
+            FROM [IRUP].[dbo].[IREmployeeDem] ie
+            LEFT JOIN IRUP..IRCodeDiscipline ircd ON ie.DisciplineCode = ircd.DisciplineCode
+            LEFT JOIN IRUP..IRSpecificOffenses iso ON ie.SpecificOfNo = iso.SpecificOfNo
         )
         SELECT 
             IRNo, 
@@ -41,9 +41,9 @@ const DisDemerit = async (IRNo) => {
         const request = pool.request();
 
         const displayDem = ` SELECT DISTINCT e.FULLNAME, ircd.DisciplineName, iso.SpecificOffenses, ie.Occurrence, ie.Penalties
-        FROM [testdb].[dbo].[IREmployeeDem] ie
-        LEFT JOIN testdb..IRCodeDiscipline ircd ON ie.DisciplineCode = ircd.DisciplineCode
-        LEFT JOIN testdb..IRSpecificOffenses iso ON ie.SpecificOfNo = iso.SpecificOfNo 
+        FROM [IRUP].[dbo].[IREmployeeDem] ie
+        LEFT JOIN IRUP..IRCodeDiscipline ircd ON ie.DisciplineCode = ircd.DisciplineCode
+        LEFT JOIN IRUP..IRSpecificOffenses iso ON ie.SpecificOfNo = iso.SpecificOfNo 
         LEFT JOIN [UE database]..vw_Employees e ON ie.EmployeeCode = e.CODE
         WHERE
             ie.IRNo = @IRNo`;

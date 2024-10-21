@@ -35,8 +35,8 @@ const getSubName = async () => {
             irs.SubjectRiskCode,
             irr.DomainCode AS SubjectDomain,
             irr.RiskDescription
-        FROM testdb..IRSubjectName irs
-        LEFT JOIN testdb..IRRiskDictionary irr ON irs.SubjectRiskCode = irr.RiskCode `;
+        FROM IRUP..IRSubjectName irs
+        LEFT JOIN IRUP..IRRiskDictionary irr ON irs.SubjectRiskCode = irr.RiskCode `;
 
         const result = await request.query(select);
         return result; 
@@ -55,7 +55,7 @@ const getSubCategory = async () => {
         SELECT DISTINCT
             DomainCode,
             RiskDomain
-        FROM testdb..IRRiskDictionary
+        FROM IRUP..IRRiskDictionary
         ORDER BY DomainCode ASC`;
 
         const result = await request.query(select);
@@ -75,7 +75,7 @@ const getDivision = async () => {
         SELECT DISTINCT
             DivisionCode,
             Division
-        FROM testdb..IRDivision
+        FROM IRUP..IRDivision
         ORDER BY DivisionCode ASC`;
 
         const result = await request.query(select);
@@ -91,7 +91,7 @@ const getQAEmail = async (SubjectCode) => {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         
-        const select = `SELECT UERMEmail FROM testdb..Users WHERE SubjectCode LIKE @SubjectCode;`;
+        const select = `SELECT UERMEmail FROM IRUP..Users WHERE SubjectCode LIKE @SubjectCode;`;
         
         request.input('SubjectCode', sql.NVarChar, `%${SubjectCode}%`); // Use backticks to create a string with the wildcard characters
         const result = await request.query(select);
@@ -110,7 +110,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
         const Code = await formatCode();
         const IRNo = await formatIR();
         const insertQueryIRDetails = `
-        INSERT INTO IRDetailss 
+        INSERT INTO IRDetails 
         (Code, IRNo, EmployeeCode, DeptCode, SubjectCode, DivisionCode, SubjectBriefDes, SubjectDate, SubjectTime, SubjectLoc, SubjectNote, SubjectCause, SubjectResponse)
         VALUES (@Code, @IRNo, @EmployeeCode, @DeptCode, @SubjectCode, @DivisionCode, @SubjectBriefDes, @SubjectDate, @SubjectTime, @SubjectLoc, @SubjectNote, @SubjectCause, @SubjectResponse)
         
@@ -118,6 +118,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
             IRD.IRNo, 
             IRS.SubjectCode,
             IRS.SubjectName,
+			D.description AS Description, 
             IRD.DivisionCode,
             UAQ.Division,
             CASE 
@@ -130,6 +131,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
             END AS UERMEmail,
             E1.FULLNAME AS FULLNAME1,  
             E1.UERMEmail AS UERMEmail1,
+			IRR.RiskDescription,
             IRD.SubjectBriefDes,
             IRD.SubjectDate,
             IRD.SubjectTime,
@@ -138,19 +140,24 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
             IRD.SubjectCause,
             IRD.SubjectResponse
         FROM 
-            testdb..IRDetailss IRD
+            IRUP..IRDetails IRD
         LEFT JOIN 
-            testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
+            IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
         LEFT JOIN 
-            testdb..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
+			IRUP..IRRiskDictionary IRR ON IRS.SubjectRiskCode = IRR.RiskCode
+		LEFT JOIN 
+            IRUP..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
         LEFT JOIN
             [UE database]..vw_Employees E ON UAQ.QA = E.CODE
         LEFT JOIN
             [UE database]..vw_Employees E1 ON UAQ.QAAssitant = E1.CODE
+		LEFT JOIN 
+			[UE database]..Department D ON IRD.DeptCode = D.DeptCode
         LEFT JOIN 
-            testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+            IRUP..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
         ORDER BY 
             IRD.DateTimeCreated DESC;
+
         `;
 
 
@@ -182,7 +189,7 @@ const IncidentReport = async (EmployeeCode, DeptCode, SubjectCode, DivisionCode,
         const currentYear = now.getFullYear(); 
         const numASC = await sql.query(`
             SELECT TOP 1 IRNo
-            FROM testdb..IRDetailss
+            FROM IRUP..IRDetails
             WHERE IRNo LIKE '${currentYear}%'
             ORDER BY Id DESC;
         `);
@@ -212,7 +219,7 @@ const getIRDept = async () => {
         const request = pool.request();
         
         const select = ` SELECT DeptCode, Dept_Desc
-        FROM testdb..IREmail
+        FROM IRUP..IREmail
         ORDER BY Dept_Desc ASC;
         `;
 
@@ -239,7 +246,7 @@ const getIRCD = async () => {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         
-        const select = ` SELECT DisciplineCode, DisciplineName FROM testdb..IRCodeDiscipline;`;
+        const select = ` SELECT DisciplineCode, DisciplineName FROM IRUP..IRCodeDiscipline;`;
 
         const result = await request.query(select);
         return result; // Return the recordset containing the new inserted data
@@ -254,7 +261,7 @@ const getIRSpeO = async () => {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         
-        const select = `SELECT SpecificOfNo, DisciplineCode, SpecificOffenses FROM testdb..IRSpecificOffenses;`;
+        const select = `SELECT SpecificOfNo, DisciplineCode, SpecificOffenses FROM IRUP..IRSpecificOffenses;`;
 
         const result = await request.query(select);
         return result; // Return the recordset containing the new inserted data
@@ -290,7 +297,7 @@ const getDept = async () => {
         D.description AS Department_Description,
         D.demerits
         FROM
-            testdb..DepartmentDem DD
+            IRUP..DepartmentDem DD
         LEFT JOIN 
             [UE Database]..Department D ON DD.DeptCode = D.DeptCode
         `;

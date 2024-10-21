@@ -48,56 +48,56 @@ router.put("/PutDivisionCode", verifyToken, AssitantQAController.FormUpdateDivCo
 
 /////////////QATABLE///////////
 router.get("/DisplayQAForm", verifyToken, QAController.QAFormDisAll); 
-router.get("/DisplayIRP", QAController.FormDisIRF); 
-router.get("/DepartmentForm", IRController.FormDepDis); 
-router.post("/AddQADeptEmail", QAController.QAInsertEmail);
+router.get("/DisplayIRP", verifyToken, QAController.FormDisIRF); 
+router.get("/DepartmentForm", verifyToken, IRController.FormDepDis); 
+router.post("/AddQADeptEmail", verifyToken, QAController.QAInsertEmail);
 // router.post("/AddConclusion", QAController.FormConclusion);
-router.get("/DisplayQA", QAController.QADisAll);
-router.post("/AddQATransfer", QAController.FormQATransfer);
+router.get("/DisplayQA", verifyToken, QAController.QADisAll);
+router.post("/AddQATransfer", verifyToken, QAController.FormQATransfer);
 // router.put("/AddQARefferal", QAController.FormQARefferal);
-router.post("/AddREConclusion", QAController.FormREConclusion);
-router.put("/PutRCASub", QAController.FormCountRCASta);
-router.post("/AddApprovedRCA", QAController.FormApprovedRCA);
-router.post("/AddDisApprovedRCA", QAController.FormDisApprovedRCA);
-router.get("/DisplayActionItem", QAController.FormDisActionItem); 
-router.put("/putActionItemStatus", QAController.FormActionStatus);
-router.get("/DisplayPendingRemarks", QAController.FormPendingRemarks);
-router.post("/AddPendingRemarks", QAController.FormPostPendingRemarks);
-router.put("/putQADStatus", QAController.FormQADoneStatus);
+router.post("/AddREConclusion", verifyToken, QAController.FormREConclusion);
+router.put("/PutRCASub", verifyToken, QAController.FormCountRCASta);
+router.post("/AddApprovedRCA", verifyToken, QAController.FormApprovedRCA);
+router.post("/AddDisApprovedRCA", verifyToken, QAController.FormDisApprovedRCA);
+router.get("/DisplayActionItem", verifyToken, QAController.FormDisActionItem); 
+router.put("/putActionItemStatus", verifyToken, QAController.FormActionStatus);
+router.get("/DisplayPendingRemarks", verifyToken, QAController.FormPendingRemarks);
+router.post("/AddPendingRemarks", verifyToken, QAController.FormPostPendingRemarks);
+router.put("/putQADStatus", verifyToken, QAController.FormQADoneStatus);
 //////////////////////////////
 
 ////HRTABLE/////
 router.get("/DisplayForm", verifyToken, HRController.FormDisAll); 
-router.put("/puthrStatus", HRController.FormHRSta);
-router.get("/DisplayHRIRP", HRController.FormDisHRIRF); 
-router.put("/AddFinancialLiability", HRController.FormFinancialLiability);
-router.put("/puthrAct", HRController.FormHRAct);
-router.post("/AddNote", HRController.FormHRN);
-router.post("/AddHRNote", HRController.FormHRNotes);
-router.post("/AddEmplo", IRController.FormEmployee);
-router.get("/DisEmploForm", IRController.FormEmploDet); 
+router.put("/puthrStatus", verifyToken, HRController.FormHRSta);
+router.get("/DisplayHRIRP", verifyToken, HRController.FormDisHRIRF); 
+router.put("/AddFinancialLiability", verifyToken, HRController.FormFinancialLiability);
+router.put("/puthrAct", verifyToken, HRController.FormHRAct);
+router.post("/AddNote", verifyToken, HRController.FormHRN);
+router.post("/AddHRNote", verifyToken, HRController.FormHRNotes);
+router.post("/AddEmplo", verifyToken, IRController.FormEmployee);
+router.get("/DisEmploForm", verifyToken, IRController.FormEmploDet); 
 // router.post("/AddDept", IRController.FormDeptment);
-router.get("/CodeDisForm", IRController.FormCBDis); 
-router.get("/SpecificOfForm", IRController.FormSpeOfDis); 
+router.get("/CodeDisForm", verifyToken, IRController.FormCBDis); 
+router.get("/SpecificOfForm", verifyToken, IRController.FormSpeOfDis); 
 ////////////////////////////////////////
 
 ////HRDEMERIT/////
-router.get("/DisplayEmployees", EmploController.DisAllEmployee);
-router.get("/DisplayEmpTab", EmploController.FormEmpTab);
+router.get("/DisplayEmployees", verifyToken, EmploController.DisAllEmployee);
+router.get("/DisplayEmpTab", verifyToken, EmploController.FormEmpTab);
 ////////////////////////////////////////
 
 ////////////AUDIT////////////////////
 router.get("/DisplayTab", verifyToken, AuditController.FormTab);
-router.get("/DisplaySubjectTab", AuditController.FormSubjectTab);
-router.post("/AddSubjectDetails", AuditController.FormSubjectNote);
-router.get("/DisplayRiskTab", AuditController.FormRiskTab);
-router.get("/DomainCodeForm", AuditController.FormDomainCode);
-router.post("/AddRiskDic", AuditController.FormRiskCode);
-router.post("/AddAudit", AuditController.FormAudit);
-router.get("/DisplayNote", AuditController.FormNote);
-router.put("/DeletedNote", AuditController.FormdelNote);
-router.put("/EditNote", AuditController.FormEdNote);
-router.put("/Putaudit", AuditController.FormAuditSta);
+router.get("/DisplaySubjectTab", verifyToken, AuditController.FormSubjectTab);
+router.post("/AddSubjectDetails", verifyToken, AuditController.FormSubjectNote);
+router.get("/DisplayRiskTab", verifyToken, AuditController.FormRiskTab);
+router.get("/DomainCodeForm", verifyToken, AuditController.FormDomainCode);
+router.post("/AddRiskDic", verifyToken, AuditController.FormRiskCode);
+router.post("/AddAudit", verifyToken, AuditController.FormAudit);
+router.get("/DisplayNote", verifyToken, AuditController.FormNote);
+router.put("/DeletedNote", verifyToken, AuditController.FormdelNote);
+router.put("/EditNote", verifyToken, AuditController.FormEdNote);
+router.put("/Putaudit", verifyToken, AuditController.FormAuditSta);
 ////////////////////////////////////////
 
 

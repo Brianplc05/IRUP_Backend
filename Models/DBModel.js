@@ -13,13 +13,13 @@ const DisplayDash = async () => {
             D.description AS Department_Description,
             IRD.QAStatus
         FROM
-            testdb..IRDetailss IRD
+            IRUP..IRDetails IRD
         LEFT JOIN
             [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
         LEFT JOIN
-            testdb..IRDeptInvolved id ON IRD.IRNo = id.IRNo
+            IRUP..IRDeptInvolved id ON IRD.IRNo = id.IRNo
         LEFT JOIN
-            testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+            IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
 		WHERE 
 			IRD.QAStatus = '1' AND IRS.SubjectCode != 'others'
         ORDER BY

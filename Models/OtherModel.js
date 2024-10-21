@@ -6,7 +6,7 @@ const getAllotherSub = async () => {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
     
-        const query = 'SELECT DeptCode FROM testdb..DirectorUser WHERE EmployeeCode = @EmployeeCode;';
+        const query = 'SELECT DeptCode FROM IRUP..DirectorUser WHERE EmployeeCode = @EmployeeCode;';
         
         const result = await request.query(query);
         return result.recordset;

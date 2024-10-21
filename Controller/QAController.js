@@ -2,17 +2,25 @@ import model from "../Models/QAModel.js";
 import util from "../Helpers/helper.js";
 
 const QAFormDisAll = async (req, res) => {
-    try{
-        const EmployeeCode = req.user.EmployeeCode;
-        if (!EmployeeCode) {
-            return res.status(401).json({ message: "Unauthorized" });
+    try {
+        const { EmployeeCode: code, DeptCode: dept } = req.user;    
+        if (code) {
+            const result = await model.getAllQA(code);
+            if (result?.recordset?.length) {
+                return res.status(200).json(result.recordset);
+            }
         }
-        const result = await model.getAllQA(EmployeeCode)
-        return res.status(200).json(result.recordset)
-    }catch (error) {
-        res.status(500).json({ msg: `Error` });
+        if (dept === '5026') {
+            const SuperAuditQAResult = await model.getSuperAuditQA();
+            return res.status(200).json(SuperAuditQAResult.recordset);
+        }
+        return res.status(400).json({ msg: "Invalid request: No Employee Code or unsupported Department Code." }); 
+    } catch (error) {
+        // Catch any errors and send back an error response
+        return res.status(500).json({ msg: `Error: ${error.message}` });
     }
-}
+};
+
 
 const FormDisIRF = async (req, res) => {
     try {
@@ -70,7 +78,7 @@ const FormQATransfer = async (req, res) => {
                     email: 'jppalacio@uerm.edu.ph',
                     name: 'JOHN BRIAN'
                 };
-                await util.sendEmail(emailContent);
+                // await util.sendEmail(emailContent);
             }
         }
         res.status(200).json({ message: 'QA Transfer updated and email sent successfully' });
@@ -82,38 +90,61 @@ const FormQATransfer = async (req, res) => {
 
 const QAInsertEmail = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
         const { IRNo, PrimaryDept, DeptCodeInv: DeptCodeInvArray } = req.body;
-        const result = await model.IRQA(IRNo, PrimaryDept, DeptCodeInvArray);
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        const result = await model.IRQA(IRNo, PrimaryDept, DeptCodeInvArray, EmployeeCode);
 
         const primaryDepartment = result.recordset[0].PrimaryDept;
         const primaryEmail = await model.getEmail(primaryDepartment);
 
         if (primaryEmail && primaryEmail.length > 0) {
-            const email = primaryEmail[0].UERMEmail;
-            const { IRNo, UERMEmail, transferEmail, SubjectName, SubjectNote, SubjectCause, SubjectResponse } = result.recordset[0];
-            
+            const PrimaryEmail = primaryEmail[0].UERMEmail;
+            const PrimaryName = primaryEmail[0].FullName;
+            const { IRNo, DateTimeCreated, UERMEmail, transferEmail, SubjectName, SubjectNote, SubjectCause, SubjectResponse } = result.recordset[0];
+            const formattedDate = new Date(DateTimeCreated).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            }).toUpperCase();
+
             const displayEmail = transferEmail && transferEmail.length > 0 ? transferEmail : UERMEmail;
 
             const emailContent = {
                 subject: "INCIDENT REPORT",
-                header: "INCIDENT REPORT DETAILS <br />",
-                content: `Good day! <br /> 
-                    I hope this email finds you well. As part of our ongoing commitment to maintaining the highest standards of quality and safety in our operations, 
-                    I wanted to provide you with a comprehensive update regarding Incident Report No. <b>${IRNo}.</b> <br /> <br /> 
-                    In response to the incident, please find the details below: <br/>
-                    <b>• Subject of the Incident:</b> ${SubjectName}<br/><br />
-                    <b>• Narrative description of the Incident:</b><br/>${SubjectNote}<br /> <br />
-                    <b>• Possible Causes of the Incident:</b><br/>${SubjectCause}<br /> <br /> 
-                    <b>• Immediate Response:</b><br/>${SubjectResponse}<br/><br />  
+                header: "INCIDENT REPORT DETAILS <br/>",
+                content: `Good Day!<br>
+                    Dear <b>${PrimaryName},</b><br><br>
+                    This email is to inform you of an incident that occurred on <b>${formattedDate}</b>, which has been escalated for review and further action.<br><br>
+
+                    <b>Incident Report Details:</b><br>
+                    <b>• Incident Report Number:</b> ${IRNo}.
+                    <br>
+                    <b>• Subject of the Incident:</b> ${SubjectName}
+                    <br>
+                    <b>• Narrative description of the Incident:</b>
+                    <br>${SubjectNote}
+                    <br> 
+                    <b>• Possible Causes of the Incident:</b>
+                    <br>${SubjectCause}
+                    <br>
+                    <b>• Immediate Response:</b>
+                    <br>${SubjectResponse}
+                    <br><br>  
                     
-                    You are required to submit a Root Cause Analysis (RCA) report to the Quality Assurance (QA) team. Attached is the PDF form of the RCA report for your reference.<br />
-                    <a href="https://drive.google.com/file/d/1h-qTg1ulXM3poyTLJlIWWru_3KlAEjJm/view?usp=sharing">Download PDF</a> <br /> <br /> 
+                    You are required to submit a Root Cause Analysis (RCA) report to the Quality Assurance In-Charge (QAIC).For your reference, 
+                    I have attached the RCA template to this email.<br> 
+                    <b>RCA TEMPLATE:</b><a href="https://drive.google.com/file/d/194Z4fIgmjLsktPlJPrfysIhsjMdL_jyI/view">Download PDF</a><br><br>
                     
-                    Please liaise with this quality assurance representative for further assistance.<br /> 
-                    <b>Quality Assurance Email:</b>${displayEmail} 
+                    Kindly ensure all sections are thoroughly filled out, as this will greatly aid in identifying corrective actions and preventive measures moving forward.
+                    Please ensure that the completed RCA, along with any additional documentation or evidence (if available), kindly coordinate with this QAIC for 
+                    further assistance.<br> 
+                    <b>Quality Assurance In-Charge (QAIC) Email:</b>${displayEmail} 
                     
                     <br><br>
-                    • EMAIL: ${email} <br/>
+                    • EMAIL: ${PrimaryEmail} <br/>
                     `,
                 email: 'jppalacio@uerm.edu.ph',
                 name: 'JOHN BRIAN'
@@ -131,12 +162,15 @@ const QAInsertEmail = async (req, res) => {
                 const emailContent = {
                     subject: "INCIDENT REPORT",
                     header: "INCIDENT REPORT UPDATE <br />",
-                    content: `Dear ${DirectorName},<br/><br/>
-                                <b>Director Email:</b>${DirectorEmail}<br/>
-                                I hope this email finds you well. As part of our ongoing commitment to maintaining the highest standards of quality and safety in our operations, 
-                                I wanted to provide you with a comprehensive update regarding Incident Report No. <b>${IRNo}.</b>Please check the Director Module for more information.<br /><br /> 
+                    content: `Good Day!<br>
+                            Dear <b>${DirectorName},</b><br><br>
+                                As part of our ongoing commitment to maintaining the highest standards of quality and safety in our operations, 
+                                I wanted to provide you with a comprehensive update regarding Incident Report No. <b>${IRNo}. </b>
+                                Please check the Director Module for more information.<br /><br /> 
                                 In response to the incident, please find the details below: <br/>
-                                <b>• Subject of the Incident:</b> ${SubjectName}<br/><br/> `,
+                                <b>• Subject of the Incident:</b> ${SubjectName}<br/><br/>
+                                
+                                <b>Director Email:</b>${DirectorEmail}<br/>`,
                     email: 'jppalacio@uerm.edu.ph',
                     name: 'JOHN BRIAN'
                 };
@@ -150,27 +184,47 @@ const QAInsertEmail = async (req, res) => {
 
             for (const emails of secondaryEmails) {
                 if (emails && emails.length > 0) {
-                    const { IRNo, SubjectName, SubjectNote, SubjectCause, SubjectResponse } = result.recordset[0];
+                    const { IRNo, DateTimeCreated, SubjectName, SubjectNote, SubjectCause, SubjectResponse } = result.recordset[0];
+                    const { FullName: primName } = primaryEmail[0];
                     const { UERMEmail: primEmail } = primaryEmail[0];
+                    const { FullName: secondName } = emails[0];
                     const { UERMEmail: secondEmail } = emails[0];
+                    const formattedDate = new Date(DateTimeCreated).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: '2-digit'
+                    }).toUpperCase();
 
                     const emailContent = {
                         subject: "INCIDENT REPORT",
                         header: "INCIDENT REPORT DETAILS <br />",
-                        content: `Good day! <br /> <br />  
-                            I hope this email finds you well. As part of our ongoing commitment to maintaining the highest standards of quality and safety in our operations, 
-                            I wanted to provide you with a comprehensive update regarding Incident Report No. <b>${IRNo}.</b><br /> <br />
-                            In response to the incident, please find the details below: <br/>
-                            • EMAIL: ${secondEmail} <br/>
-                            <b>• Subject of the Incident:</b> ${SubjectName}<br/><br />
-                            <b>• Narrative description of the Incident:</b><br/>${SubjectNote}<br /> <br />
-                            <b>• Possible Causes of the Incident:</b><br/>${SubjectCause}<br /> <br /> 
-                            <b>• Immediate Response:</b><br/>${SubjectResponse}<br/><br />  
+                        content: `Good Day!<br>
+                            Dear <b>${secondName},</b><br><br>
+                            This email is to inform you of an incident that occurred on <b>${formattedDate}</b>, which has been escalated for review and further action.<br><br>
+
+                            <b>Incident Report Details:</b><br>
+                            <b>• Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>• Subject of the Incident:</b> ${SubjectName}
+                            <br>
+                            <b>• Narrative description of the Incident:</b>
+                            <br>${SubjectNote}
+                            <br> 
+                            <b>• Possible Causes of the Incident:</b>
+                            <br>${SubjectCause}
+                            <br>
+                            <b>• Immediate Response:</b>
+                            <br>${SubjectResponse}
+                            <br><br>  
                             
                             <b>You are required to collaborate with Primary Department Involved to deliberate the Incident</b>
                             <br/><br/>
                             Here are the details below: <br/>
-                            • <b>Primary Email of Department Involved:</b> ${primEmail} <br/>`,
+                            • <b>Primary Name of Department Involved:</b> ${primName} <br/>
+                            • <b>Primary Email of Department Involved:</b> ${primEmail} <br/>
+                            
+                            <br><br>
+                            • EMAIL: ${secondEmail} <br/>`,
                         email: 'jppalacio@uerm.edu.ph',
                         name: 'John Brian'
                     };
@@ -212,13 +266,17 @@ const FormREConclusion = async (req, res) => {
 
 const FormApprovedRCA = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const iRNo = req.body.IRNo;
         const ActionItem = req.body.ActionItem;  // Assuming this is an array
         const TimelineFromDate = req.body.TimelineFromDate;  // Assuming this is an array
         const TimelineToDate = req.body.TimelineToDate;  // Assuming this is an array
 
         for (let i = 0; i < ActionItem.length; i++) {
-            await model.approvedRCA(iRNo, ActionItem[i], TimelineFromDate[i], TimelineToDate[i]);
+            await model.approvedRCA(iRNo, ActionItem[i], TimelineFromDate[i], TimelineToDate[i], EmployeeCode);
         }
 
         const result = await model.selectApprovedRCA(iRNo);
@@ -274,18 +332,22 @@ async function ActionitemEmail(IRNo, SubjectName, PrimaryName, PrimaryEmail, QAN
         const emailContent = {
             subject: "IMPLEMENTIVE ACTION OF THE INCIDENT REPORT",
             header: "CORRECTIVE/ PREVENTIVE ACTION OF THE INCIDENT REPORT<br />",
-            content: `Dear ${PrimaryName},<br/><br/>
-            <b>Email: ${PrimaryEmail}</b><br/><br/>
-            We are writing to inform you about the necessary corrective and preventive actions required following the recent incident report for the <b>${SubjectName}</b>. It is imperative that these actions are undertaken promptly to address the identified issues and prevent future occurrences. Please review the details below: <br><br>
-            <b>• Incident Report Number:</b> ${IRNo}<br/><br />
-
-            <b>Action Details:</b><br />
-            ${ActionItems.map((action, index) => `<b>• Action Item ${index + 1}:</b> ${action}<br/>`).join('')}
-            <br>
-            For any questions or further clarification, please feel free to contact me at:
-            <br>
-            <b>• Quality Officer Name:</b> ${QAName}<br>
-            <b>• Quality Officer Email:</b> ${QAEmail}
+            content: `Good Day!<br>
+                Dear <b>${PrimaryName},</b><br><br>
+                We are writing to inform you about the necessary corrective and 
+                preventive actions required following the recent incident report for the <b>${SubjectName}</b>. 
+                It is imperative that these actions are undertaken promptly to address 
+                the identified issues and prevent future occurrences.<br><br> 
+                
+                <b>Please review the Action Details below:</b><br>
+                <b>• Incident Report Number:</b> ${IRNo}<br>
+                ${ActionItems.map((action, index) => `<b>• Action Item ${index + 1}:</b> ${action}<br/>`).join('')}
+                <br><br>
+                For any questions or further clarification, please feel free to contact me at:
+                <br>
+                <b>• Quality Officer Name:</b> ${QAName}<br>
+                <b>• Quality Officer Email:</b> ${QAEmail}<br><br>
+                <b>Email: ${PrimaryEmail}</b><br/><br/>
             `,
             email: 'jppalacio@uerm.edu.ph',
             name: 'JOHN BRIAN'
@@ -316,26 +378,32 @@ const FormDisApprovedRCA = async (req, res) => {
                     header: `<div style="background-color: red; color: white; padding: 15px; height:20px">
                                 DISAPPROVED ROOT CAUSE ANALYSIS (RCA)
                             </div>`,
-                    content: `Dear ${PrimaryName},<br />
-                        <b> Email: ${PrimaryEmail} </b><br/><br/>
-                        I am writing to formally address that the RCA you've submitted is disapproved. The required data and elements in the RCA did not meet acquired details. Check the details below:
-                    <br><br>
-                    <b>Incident Details:</b>
-                    <br>
-                    <b>• Incident Number:</b> ${IRNo} 
-                    <br>
-                    <b>• Subject of the Incident:</b>${SubjectName}
-                    <br>
-                    <b>• Quality Officer Remarks:</b> ${newConclusion} 
-                    <br><br>
-                    You are required to submit again the Root Cause Analysis (RCA) report to the Quality Assurance (QA) team. Attached is the PDF form of the RCA report for your reference.<br />
-                    <a href="https://drive.google.com/file/d/1h-qTg1ulXM3poyTLJlIWWru_3KlAEjJm/view?usp=sharing">Download PDF</a> <br /><br />
-                    For any questions or further clarification, please feel free to contact me at:
-                    <br>
-                    <b>• Quality Officer Name:</b> ${QAName}
-                    <br>
-                    <b>• Quality Officer Email:</b> ${QAEmail}
-                    <div style="background-color: red; height: 10px"/>`,
+                    content: `Good Day!<br>
+                        Dear <b>${PrimaryName},</b><br><br>
+                        I am writing to formally address that the RCA you've submitted is <b>DISAPPROVED</b>. 
+                        The required data and elements in the RCA did not meet acquired details. 
+                        Check the details below:
+                        <br><br>
+                        <b>Incident Details:</b>
+                        <br>
+                        <b>• Incident Number:</b> ${IRNo} 
+                        <br>
+                        <b>• Subject of the Incident:</b>${SubjectName}
+                        <br>
+                        <b>• Quality Officer Remarks:</b> ${newConclusion} 
+                        <br><br>
+                        You are required to resubmit the Root Cause Analysis (RCA) report to the Quality Assurance (QA) team. 
+                        Attached is the PDF form of the RCA report for your reference.<br />
+                        <a href="https://drive.google.com/file/d/194Z4fIgmjLsktPlJPrfysIhsjMdL_jyI/view">Download PDF</a> <br /><br />
+                        For any questions or further clarification, please feel free to contact me at:
+                        <br>
+                        <b>• Quality Officer Name:</b> ${QAName}
+                        <br>
+                        <b>• Quality Officer Email:</b> ${QAEmail}
+                        <div style="background-color: red; height: 10px"/>
+                    
+                    <br/><br/>
+                    <b> Email: ${PrimaryEmail} </b><br/><br/>`,
                     email: 'jppalacio@uerm.edu.ph',
                     name: 'JOHN BRIAN'
                 };                  
@@ -401,21 +469,23 @@ const FormDisActionItem = async (req, res) => {
 
 const FormActionStatus = async (req, res) => {
     try {
-        const Id = req.body.Id;
-        const ActionStatus = req.body.ActionStatus;
-        if (!Id) {
-            return res.status(400).json({ message: 'Id is required' }); // Check if Id is missing
+        const { EmployeeCode } = req.user;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
         }
-        const result = await model.AcionItemStatus(Id, ActionStatus);
+        const { Id, ActionStatus } = req.body;
+        if (!Id) {
+            return res.status(400).json({ message: 'Id is required' });
+        }
+        const result = await model.AcionItemStatus(Id, ActionStatus, EmployeeCode);
         if (result.rowsAffected[0] === 0) {
             return res.status(403).json(result.recordset);
         }
         return res.status(200).json(result.recordset);
     } catch (error) {
-        console.error('Error updating note:', error);
-        res.status(500).json({ message: 'ERROR' });
+        return res.status(500).json({ message: 'ERROR' });
     }
-}
+};
 
 
 const FormPendingRemarks = async (req, res) => {
@@ -518,25 +588,25 @@ async function PendingEmail(QAEmail, FullName, IRNo, SubjectName) {
     if (QAEmail) {
         const emailContent = {
             subject: "PENDING INCIDENT REPORT",
-            header: `<div style="background-color: #FFC412; color: darkgray; padding: 15px; height:20px">
-                        PENDING INCIDENT REPORT
+            header: `<div style="background-color: #8B0000; color: #FFD700; height: 100px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px;">
+                        <div style="font-size: 30px; line-height: 30px;">&#9888;</div>
+                        <span style="font-size: 16px; font-weight: bold; letter-spacing: 1px;">PENDING INCIDENT REPORT</span>
                     </div>`,
-            content: `Dear ${FullName} <br/>
-                We've detected a pending Incident Report that requires your immediate attention. Please log in to your account and review the report to take the necessary actions.
-                <br/>
-                <br/>
-                <b>Details:</b>
-                <br/>
-                <b>IR Number:</b> ${IRNo}
-                <br/>
-                <b>Subject of the Incident:</b> ${SubjectName}
-                <br/>
-                <br/>
-                Please ensure that you review and address the report as soon as possible to maintain compliance and ensure timely resolution.
-                <br/>
-                Thank you for your prompt attention to this matter.
-                <div style="background-color: red; height: 10px"/>
-                ${QAEmail}`,
+            content: `Good Day!<br>
+                        Dear <b>${FullName},</b><br><br>
+                        We've detected a pending Incident Report that requires your immediate attention. 
+                        Please log in to your account and review the report to take the necessary actions.
+                        <br><br>
+                        <b>Incident Report Details:</b><br> 
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Subject of the Incident:</b> ${SubjectName}
+                            <br><br>
+                        Please ensure that you review and address the report as soon as possible 
+                        to maintain compliance and ensure timely resolution.
+                        <br><br>
+                        Thank you for your prompt attention to this matter.
+                        ${QAEmail}`,
             email: 'jppalacio@uerm.edu.ph',
             name: 'JOHN BRIAN'
         };

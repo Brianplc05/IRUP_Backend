@@ -20,19 +20,19 @@ const getAll = async () => {
             IRN.newHRNote,
             IRD.HRStatus
         FROM
-            testdb..IRDetailss IRD
+            IRUP..IRDetails IRD
         LEFT JOIN [UE Database]..Department D ON IRD.DeptCode = D.DeptCode
-        LEFT JOIN testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
-        LEFT JOIN testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
-        LEFT JOIN testdb..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
-        LEFT JOIN testdb..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
-        LEFT JOIN testdb..Users US ON IRT.EmpTransfer = US.EmployeeCode
+        LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+        LEFT JOIN IRUP..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+        LEFT JOIN IRUP..IRQATransfer IRT ON IRD.IRNo = IRT.IRNo
+        LEFT JOIN IRUP..IRSubjectName IRS1 ON IRT.SubjectCode = IRS1.SubjectCode
+        LEFT JOIN IRUP..Users US ON IRT.EmpTransfer = US.EmployeeCode
         LEFT JOIN (
             SELECT
                 newHRNote,
                 IRNo
             FROM
-                testdb..IRHRNote
+                IRUP..IRHRNote
         ) IRN ON IRD.IRNo = IRN.IRNo
         WHERE
             IRS.SubjectCode != 'others'
@@ -55,7 +55,7 @@ const HRStatus = async (HRStatus, IRNo) => {
                 const request = pool.request();
                 
                 const updateQuery = `
-                    UPDATE IRDetailss
+                    UPDATE IRDetails
                     SET HRStatus = @HRStatus
                     WHERE IRNo = @IRNo`;
                 
@@ -93,18 +93,18 @@ const getHRIREPORT = async (IRNo) => {
             IHN.newHRNote
 
         FROM
-            testdb..IRDetailss IRD
-        LEFT JOIN testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+            IRUP..IRDetails IRD
+        LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
         LEFT JOIN (
             SELECT 
                 ID.IRNo,
                 D1.Dept_Desc AS PrimaryDept,
                 STRING_AGG(D2.Dept_Desc, ', ') AS DeptCodeInvDescriptions
             FROM 
-                testdb..IRDeptInvolved ID
-            LEFT JOIN testdb..IREmail D1 ON ID.PrimaryDept = D1.DeptCode
+                IRUP..IRDeptInvolved ID
+            LEFT JOIN IRUP..IREmail D1 ON ID.PrimaryDept = D1.DeptCode
             CROSS APPLY STRING_SPLIT(ID.DeptCodeInv, ',') AS SplitDeptCode
-            LEFT JOIN testdb..IREmail D2 ON SplitDeptCode.value = D2.DeptCode
+            LEFT JOIN IRUP..IREmail D2 ON SplitDeptCode.value = D2.DeptCode
             GROUP BY ID.IRNo, D1.Dept_Desc
         ) DeptDesc ON IRD.IRNo = DeptDesc.IRNo
         LEFT JOIN (
@@ -112,14 +112,14 @@ const getHRIREPORT = async (IRNo) => {
                 newHRNote,
                 IRNo
             FROM
-                testdb..IRHRNote
+                IRUP..IRHRNote
         ) IHN ON IRD.IRNo = IHN.IRNo
 		LEFT JOIN (
                 SELECT 
                     IRNo,
                     STRING_AGG(ActionItem, '. ') AS CombinedActionItems
                 FROM
-                    testdb..IRActionItems
+                    IRUP..IRActionItems
                 GROUP BY IRNo
             ) IRA ON IRD.IRNo = IRA.IRNo
         WHERE
@@ -141,7 +141,7 @@ const HRAction = async (HRDicipAction, IRNo) => {
                 const request = pool.request();
                 
                 const updateQuery = `
-                    UPDATE IRDetailss
+                    UPDATE IRDetails
                     SET HRDicipAction = @HRDicipAction
                     WHERE IRNo = @IRNo`;
                 
@@ -157,18 +157,19 @@ const HRAction = async (HRDicipAction, IRNo) => {
             }
 }
 
-const HRNote = async (newHRNote, IRNo) => {
+const HRNote = async (newHRNote, IRNo, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
 
         const insertQuery = `
-        INSERT INTO IRHRNote (IRNo, newHRNote, DateTimeCreated)
-        VALUES (@IRNo, @newHRNote, GETDATE())
+        INSERT INTO IRHRNote (IRNo, newHRNote, DateTimeCreated, CreatedBy)
+        VALUES (@IRNo, @newHRNote, GETDATE(), @EmployeeCode)
         `;
 
         request.input('newHRNote', sql.NVarChar, newHRNote);
         request.input('IRNo', sql.NVarChar, IRNo);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
         const result = await request.query(insertQuery);
         return result;
@@ -179,16 +180,16 @@ const HRNote = async (newHRNote, IRNo) => {
     }
 };
 
-const HRNotes = async (newHRNote, IRNo) => {
+const HRNotes = async (newHRNote, IRNo, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
 
         const insertQuery = `
-        INSERT INTO IRHRNote (IRNo, newHRNote, DateTimeCreated)
-        VALUES (@IRNo, @newHRNote, GETDATE())
+        INSERT INTO IRHRNote (IRNo, newHRNote, DateTimeCreated, CreatedBy)
+        VALUES (@IRNo, @newHRNote, GETDATE(), @EmployeeCode )
 
-        UPDATE IRDetailss
+        UPDATE IRDetails
         SET DateTimeHRUpdated = GETDATE(),
         HRStatus = '0'
         WHERE IRNo = @IRNo;
@@ -196,6 +197,7 @@ const HRNotes = async (newHRNote, IRNo) => {
 
         request.input('newHRNote', sql.NVarChar, newHRNote);
         request.input('IRNo', sql.NVarChar, IRNo);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
         const result = await request.query(insertQuery);
         return result;
@@ -206,16 +208,20 @@ const HRNotes = async (newHRNote, IRNo) => {
     }
 };
 
-const HRFinLiability = async (IRNo, FinancialLiability) => {
+const HRFinLiability = async (IRNo, FinancialLiability, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         request.input('IRNo', sql.NVarChar, IRNo);
         request.input('FinancialLiability', sql.NVarChar, FinancialLiability);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
+
 
         const updateQuery = `
-            UPDATE IRDetailss
-            SET FinancialLiability = @FinancialLiability
+            UPDATE IRDetails
+            SET FinancialLiability = @FinancialLiability,
+            CreatedByLiability = @EmployeeCode,
+            DateTimeLiability = GETDATE()
             WHERE IRNo = @IRNo;
         `;
         const result = await request.query(updateQuery);

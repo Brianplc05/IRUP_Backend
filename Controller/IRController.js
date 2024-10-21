@@ -71,27 +71,26 @@ const FormIncident = async (req, res) => {
             SubjectBriefDes, 
             SubjectDate, 
             SubjectTime, 
-            SubjectLoc.toUpperCase(), 
+            SubjectLoc.toUpperCase().trim(), 
             SubjectNote.trim(), 
             SubjectCause, 
             SubjectResponse
         );
 
         // Accessing the first record in the recordset array
-       
 
         const records = result.recordset;
         console.log(records)
         for (const record of records) {
-            const { IRNo, FULLNAME, SubjectName, UERMEmail, FULLNAME1, UERMEmail1, Division, SubjectBriefDes } = record;
+            const { IRNo, FULLNAME, SubjectName, Description, UERMEmail, FULLNAME1, UERMEmail1,SubjectBriefDes, SubjectDate, SubjectTime, SubjectLoc, RiskDescription } = record;
 
             if (record.SubjectCode === 'others') {
-                await OtherSubjectCode(IRNo, FULLNAME, UERMEmail, Division, SubjectBriefDes);
+                await OtherSubjectCode(IRNo, FULLNAME, UERMEmail, Description, SubjectBriefDes);
                 console.log('Email sent to the QA');
-                await OtherSubjectCode1(IRNo, FULLNAME1, UERMEmail1, Division, SubjectBriefDes);
+                await OtherSubjectCode1(IRNo, FULLNAME1, UERMEmail1, Description, SubjectBriefDes);
                 console.log('Email sent to the QAAssistant');
             } else {
-                await UniqueSubjectCode(IRNo, FULLNAME, UERMEmail, SubjectName);
+                await UniqueSubjectCode(IRNo, FULLNAME, UERMEmail, SubjectName, SubjectDate, SubjectTime, RiskDescription, SubjectLoc);
                 console.log('Email sent to the QA OFFICER');
             }
         }
@@ -102,31 +101,32 @@ const FormIncident = async (req, res) => {
         return res.status(500).json({ message: 'ERROR CREATING INCIDENT REPORT' });
     }
 
-    async function OtherSubjectCode(IRNo, FULLNAME, UERMEmail, Division, SubjectBriefDes) {
+    async function OtherSubjectCode(IRNo, FULLNAME, UERMEmail, Description, SubjectBriefDes) {
         if (UERMEmail) {
             const emailContent = {
                 subject: "INCIDENT REPORT",
                 header: `INCIDENT REPORT DETAILS<br />`,
-                content: `Good day! <br> 
-                        I hope everything is going smoothly for you. 
-                        I wanted to bring to your attention the following incident report for your review.
-                        <br> 
-                        <br> 
-                        <b>Incident Report Details:</b>
-                        <br> 
-                        Incident Report Number: <b>${IRNo}.</b> 
-                        <br> 
-                        We have received an incident report regarding your division: <b>${Division}</b>
-                        <br>
-                        This is a brief description of the incident: <b>${SubjectBriefDes}</b>
-                        <br>
-                        <br>
-                        Please review the incident details and address the concerns accordingly.
-                        <br>
-                        Thank you for your prompt attention to this matter.
-                        <br>
-                        QA Name: <b>${FULLNAME}.</b><br/>
-                        QA Email: <b>${UERMEmail}.</b>`,
+                content: `Good Day!<br>
+                            Dear <b>${FULLNAME},</b><br><br>
+                            We are reaching out to request a review and reclassification of an incident report 
+                            currently tagged under the "Others" category in the IR system. 
+                            Below are the details of the incident:
+                            <br><br> 
+                            <b>Incident Report Details:</b>
+                            <br> 
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Incident Responder (Department):</b> ${Description}
+                            <br> 
+                            <b>Brief Description of the incident:</b> ${SubjectBriefDes}
+                            <br><br>
+                            Your prompt assistance in ensuring proper documentation and handling, 
+                            we kindly request your team’s assistance in reviewing the incident report 
+                            and determining the appropriate category.
+                            <br><br>
+                            Thank you for your prompt attention to this matter.
+                            <br>
+                            QA Email: <b>${UERMEmail}.</b>`,
                 email: 'jppalacio@uerm.edu.ph',
                 name: 'JOHN BRIAN'
             };
@@ -134,31 +134,35 @@ const FormIncident = async (req, res) => {
         }
     }
 
-    async function OtherSubjectCode1(IRNo, FULLNAME1, UERMEmail1, Division, SubjectBriefDes) {
+    async function OtherSubjectCode1(IRNo, FULLNAME1, UERMEmail1,  Description, SubjectBriefDes) {
         if (UERMEmail1) {
             const emailContent = {
                 subject: "INCIDENT REPORT",
                 header: `INCIDENT REPORT DETAILS<br />`,
-                content: `Good day! <br> 
-                        I hope everything is going smoothly for you. 
-                        I wanted to bring to your attention the following incident report for your review.
-                        <br> 
-                        <br> 
-                        <b>Incident Report Details:</b>
-                        <br> 
-                        Incident Report Number: <b>${IRNo}.</b> 
-                        <br> 
-                        We have received an incident report regarding your division: <b>${Division}</b>
-                        <br>
-                        This is a brief description of the incident: <b>${SubjectBriefDes}</b>
-                        <br>
-                        <br>
-                        Please review the incident details and address the concerns accordingly.
-                        <br>
-                        Thank you for your prompt attention to this matter.
-                        <br>
-                        QA Assistant Name: <b>${FULLNAME1}.</b><br/>
-                        QA Assistant Email: <b>${UERMEmail1}.</b>`,
+                content: `Good Day!<br>
+                            Dear <b>${FULLNAME1},</b><br><br>
+                            We are reaching out to request a review and reclassification of an incident report 
+                            currently tagged under the "Others" category in the IR system. 
+                            Below are the details of the incident:
+                            <br> 
+                            <br> 
+                            <b>Incident Report Details:</b>
+                            <br> 
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Incident Responder (Department):</b> ${Description}
+                            <br> 
+                            <b>Brief Description of the incident:</b> ${SubjectBriefDes}
+                            <br>
+                            <br>
+                            Your prompt assistance in ensuring proper documentation and handling, 
+                            we kindly request your team’s assistance in reviewing the incident report 
+                            and determining the appropriate category.
+                            <br>
+                            <br>
+                            Thank you for your prompt attention to this matter.
+                            <br>
+                            QA Email: <b>${UERMEmail1}.</b>`,
                 email: 'jppalacio@uerm.edu.ph',
                 name: 'JOHN BRIAN'
             };
@@ -166,34 +170,56 @@ const FormIncident = async (req, res) => {
         }
     }
 
-    async function UniqueSubjectCode(IRNo, FULLNAME, UERMEmail, SubjectName) {
+    async function UniqueSubjectCode(IRNo, FULLNAME, UERMEmail, SubjectName, SubjectDate, SubjectTime, RiskDescription, SubjectLoc) {
         if (UERMEmail) {
+            const formattedDate = new Date(SubjectDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            }).toUpperCase();
+    
+            const formattedTime = new Date(SubjectTime).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).toUpperCase();
+    
             const emailContent = {
                 subject: "INCIDENT REPORT",
                 header: `INCIDENT REPORT DETAILS <br />`,
-                content: `Good day! <br> 
-                        I hope everything is going smoothly for you. 
-                        I wanted to bring to your attention the following incident report for your review.
-                        <br> 
-                        <br> 
-                        <b>Incident Report Details:</b>
-                        <br> 
-                        Incident Report Number: <b>${IRNo}.</b> 
-                        <br> 
-                        We have received an incident report regarding:  <b>${SubjectName}</b><br>
-                        <br>
-                        Please review the incident details and address the concerns accordingly.
-                        <br>
-                        Thank you for your prompt attention to this matter.
-                        <br>
-                        QA Name: <b>${FULLNAME}.</b><br/>
-                        QA Email: <b>${UERMEmail}.</b>`,
+                content: `Good Day!<br>
+                            Dear <b>${FULLNAME},</b><br><br>
+    
+                            I would like to bring to your attention the reported incident in the system. 
+                            Please find the details of the incident below for your review and necessary action:
+                            <br> 
+                            <br> 
+                            <b>Incident Report Details:</b>
+                            <br> 
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Subject of the Incident:</b> ${SubjectName}
+                            <br> 
+                            <b>Brief Description of the incident:</b> ${RiskDescription}
+                            <br>
+                            <b>Date and Time:</b> ${formattedDate} & ${formattedTime}
+                            <br>
+                            <b>Location of the incident:</b> ${SubjectLoc}
+                            <br>
+                            <br>
+                            Kindly review the incident and address the concerns accordingly.
+                            <br>
+                            <br>
+                            Thank you for your prompt attention to this matter.
+                            <br>
+                        
+                            QA Email: <b>${UERMEmail}.</b>`,
                 email: 'jppalacio@uerm.edu.ph',
                 name: 'JOHN BRIAN'
             };
             await util.sendEmail(emailContent);
         }
-    }
+    }    
 };
 
 const FormDepDis = async (req, res) => {

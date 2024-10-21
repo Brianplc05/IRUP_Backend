@@ -21,6 +21,10 @@ const FormSubjectTab = async (req, res) => {
 
 const FormSubjectNote = async (req, res) => {
     try {
+        const EmploCode = req.user.EmployeeCode;
+        if (!EmploCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const { SubjectName, SubjectPolicy, SubjectRiskCode, EmployeeCode, SecondaryQA } = req.body;
         // Convert SubjectPolicy to a string if it is an array
         const subjectPolicyString = Array.isArray(SubjectPolicy) ? SubjectPolicy.join(', ') : SubjectPolicy;
@@ -30,7 +34,8 @@ const FormSubjectNote = async (req, res) => {
             subjectPolicyString,
             SubjectRiskCode.trim(),
             EmployeeCode,
-            SecondaryQA
+            SecondaryQA,
+            EmploCode
         );
 
         console.log('Result from model.SubjectDetails:', result);
@@ -67,10 +72,14 @@ const FormDomainCode = async (req, res) => {
 
 const FormRiskCode = async (req, res) => {
 	try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const { DomainCode, RiskDomain, Risk, RiskDescription } = req.body;
     
         const result = await model.RiskDic(
-            DomainCode.toUpperCase(), RiskDomain.trim(), Risk, RiskDescription
+            DomainCode.toUpperCase(), RiskDomain.trim(), Risk, RiskDescription, EmployeeCode
         )
 
         if (result.rowsAffected === 0) {
@@ -86,10 +95,14 @@ const FormRiskCode = async (req, res) => {
 
 const FormAudit = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const iRNo = req.body.iRNo;
         const note = req.body.note;
         const policyCode = req.body.policyCode;
-        const result = await model.IRAudit(note, iRNo, policyCode);
+        const result = await model.IRAudit(note, iRNo, policyCode, EmployeeCode);
         if (result.rowsAffected === 0) {
             return res.status(403).json({ message: 'Failed to create new note' });
         }
@@ -116,11 +129,15 @@ const FormNote = async (req, res) => {
 
 const FormdelNote = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const Id = req.body.Id;
         if (!Id) {
             return res.status(400).json({ message: 'Id is required' }); // Check if Id is missing
         }
-        const result = await model.updNote(Id);
+        const result = await model.updNote(Id, EmployeeCode);
         if (result.rowsAffected[0] === 0) {
             return res.status(403).json(result.recordset);
         }
@@ -133,9 +150,13 @@ const FormdelNote = async (req, res) => {
 
 const FormEdNote = async (req, res) => {
     try{
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const Id = req.body.Id;
         const newNote = req.body.newNote;
-        const result = await model.editNote(Id, newNote);
+        const result = await model.editNote(Id, newNote, EmployeeCode);
         if (result.rowsAffected[0] === 0) {
             return res.status(403).json(result.recordset);
         }
@@ -148,9 +169,13 @@ const FormEdNote = async (req, res) => {
 
 const FormAuditSta = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const AuditStatus = req.body.AuditStatus;
         const iRNo = req.body.IRNo;
-        const result = await model.AuditStatus(AuditStatus, iRNo)
+        const result = await model.AuditStatus(AuditStatus, iRNo, EmployeeCode)
         if (result.rowsAffected === 0){
             res.status(403).json({ body: 'FAILED TO UPDATE STATUS'})
         }

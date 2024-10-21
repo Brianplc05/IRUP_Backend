@@ -1,6 +1,44 @@
 import config from "../Configuration/config.js";
 import sql from "mssql";
 
+const getSuperAuditQAA = async () => {
+    try {
+        const pool = await sql.connect(config.pool);
+        const request = pool.request();
+        
+        const select = `SELECT 
+                i.IRNo, 
+                d.description AS Department_Description,
+                CASE 
+                    WHEN uaq1.Division IS NOT NULL AND uaq1.DivisionCode IS NOT NULL 
+                    THEN uaq1.Division 
+                    ELSE uaq.Division 
+                END AS Division,
+                CASE 
+                    WHEN uaq1.Division IS NOT NULL AND uaq1.DivisionCode IS NOT NULL 
+                    THEN uaq1.DivisionCode 
+                    ELSE uaq.DivisionCode 
+                END AS DivisionCode,
+                irs.SubjectCode
+            FROM IRUP..IRDetails i
+            LEFT JOIN [UE Database]..Department d ON i.DeptCode = d.DeptCode
+            LEFT JOIN IRUP..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode
+            LEFT JOIN IRUP..IRDivision uaq ON i.DivisionCode = uaq.DivisionCode
+            LEFT JOIN IRUP..IRDivision uaq1 ON i.TransferDivisionCode = uaq1.DivisionCode
+            WHERE 
+                irs.SubjectCode = 'others' 
+            ORDER BY 
+                i.DateTimeCreated DESC;`;
+                
+        const result = await request.query(select);
+        return result; 
+    } catch (error) {
+        console.error('Error executing SQL query:', error);
+        throw error;
+    }
+}
+
+
 const getAllAssistantQA = async (EmployeeCode) => {
     try {
     
@@ -11,16 +49,31 @@ const getAllAssistantQA = async (EmployeeCode) => {
             SELECT 
                 i.IRNo, 
                 d.description AS Department_Description,
-                uaq.Division,
-                uaq.DivisionCode,
+                CASE 
+                    WHEN uaq1.Division IS NOT NULL AND uaq1.DivisionCode IS NOT NULL 
+                    THEN uaq1.Division 
+                    ELSE uaq.Division 
+                END AS Division,
+                CASE 
+                    WHEN uaq1.Division IS NOT NULL AND uaq1.DivisionCode IS NOT NULL 
+                    THEN uaq1.DivisionCode 
+                    ELSE uaq.DivisionCode 
+                END AS DivisionCode,
                 irs.SubjectCode
-            FROM testdb..IRDetailss i
+            FROM IRUP..IRDetails i
             LEFT JOIN [UE Database]..Department d ON i.DeptCode = d.DeptCode
-            LEFT JOIN testdb..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode
-            LEFT JOIN testdb..IRDivision uaq ON i.DivisionCode = uaq.DivisionCode
+            LEFT JOIN IRUP..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode
+            LEFT JOIN IRUP..IRDivision uaq ON i.DivisionCode = uaq.DivisionCode
+            LEFT JOIN IRUP..IRDivision uaq1 ON i.TransferDivisionCode = uaq1.DivisionCode
             WHERE 
                 irs.SubjectCode = 'others' 
-                AND (uaq.QA = @EmployeeCode OR uaq.QAAssitant = @EmployeeCode)
+                AND (
+                    (uaq1.Division IS NOT NULL AND uaq1.DivisionCode IS NOT NULL 
+                        AND (uaq1.QA = @EmployeeCode OR uaq1.QAAssitant = @EmployeeCode)) 
+                    OR 
+                    (uaq1.Division IS NULL AND uaq1.DivisionCode IS NULL 
+                        AND (uaq.QA = @EmployeeCode OR uaq.QAAssitant = @EmployeeCode))
+                )
             ORDER BY 
                 i.DateTimeCreated DESC;
             `;
@@ -54,8 +107,8 @@ const getIREPORT = async (IRNo) => {
                 IRD.DateTimeCreated
 
             FROM
-                testdb..IRDetailss IRD
-            LEFT JOIN testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
+                IRUP..IRDetails IRD
+            LEFT JOIN IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode
             WHERE
                 IRD.IRNo = @IRNo;`;
 
@@ -77,7 +130,7 @@ const getDivisionName = async () => {
             SELECT DISTINCT
                 DivisionCode,
                 Division
-            FROM testdb..IRDivision
+            FROM IRUP..IRDivision
             ORDER BY DivisionCode ASC`;
 
         const result = await request.query(selectQuery);
@@ -94,7 +147,7 @@ const getSubjectName = async () => {
         const request = pool.request();
 
         const selectQuery = `SELECT * 
-            FROM testdb..IRSubjectName 
+            FROM IRUP..IRSubjectName 
             WHERE SubjectCode <> 'others';
             `;
 
@@ -106,35 +159,48 @@ const getSubjectName = async () => {
     }
 }
 
-const UpdateDivisionCode = async (IRNo, DivisionCode) => {
+const UpdateDivisionCode = async (IRNo, TransferDivisionCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
+
+        console.log('CHECK DATA', IRNo, TransferDivisionCode)
         
         const updateQuery = `
-            UPDATE IRDetailss
-            SET DivisionCode = @DivisionCode
+            UPDATE IRDetails
+            SET TransferDivisionCode = @TransferDivisionCode
             WHERE IRNo = @IRNo;
             
             SELECT TOP 1
                 IRD.IRNo, 
                 IRD.DivisionCode,
+				IRD.TransferDivisionCode,
                 IRD.SubjectBriefDes,
-                E.FULLNAME AS TransferQAName,
-                E.UERMEmail AS TransferQAEmail,
-				E1.FULLNAME AS TransferQAAName,
-                E1.UERMEmail AS TransferQAAEmail
+                E.FULLNAME AS QANameOwner,
+                E.UERMEmail AS QAEmailOwner,
+				E1.FULLNAME AS QAANameOwner,
+                E1.UERMEmail AS QAAEmailOwner,
+				ES.FULLNAME AS TransferQAName,
+                ES.UERMEmail AS TransferQAEmail,
+				ES1.FULLNAME AS TransferQAAName,
+                ES1.UERMEmail AS TransferQAAEmail
 
             FROM 
-                testdb..IRDetailss IRD 
+                IRUP..IRDetails IRD 
             LEFT JOIN 
-                testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
+                IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
             LEFT JOIN 
-                testdb..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
+                IRUP..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
 			LEFT JOIN
                 [UE database]..vw_Employees E ON UAQ.QA = E.CODE
             LEFT JOIN
                 [UE database]..vw_Employees E1 ON UAQ.QAAssitant = E1.CODE
+			LEFT JOIN 
+                IRUP..IRDivision UAQ1 ON IRD.TransferDivisionCode = UAQ1.DivisionCode
+			LEFT JOIN
+                [UE database]..vw_Employees ES ON UAQ1.QA = ES.CODE
+            LEFT JOIN
+                [UE database]..vw_Employees ES1 ON UAQ1.QAAssitant = ES1.CODE
 			WHERE
                 IRD.IRNo = @IRNo
             ORDER BY 
@@ -142,7 +208,7 @@ const UpdateDivisionCode = async (IRNo, DivisionCode) => {
 
 
         request.input('IRNo', sql.NVarChar, IRNo);
-        request.input('DivisionCode', sql.NVarChar, DivisionCode);
+        request.input('TransferDivisionCode', sql.NVarChar, TransferDivisionCode);
 
         return await request.query(updateQuery); // Removed the unnecessary assignment to 'result'
     } catch (error) {
@@ -158,11 +224,12 @@ const UpdateSubjectCode = async (IRNo, SubjectCode, EmUpdSubCode) => {
         const request = pool.request();
 
         const updateQuery = `
-            UPDATE testdb..IRDetailss
+            UPDATE IRUP..IRDetails
             SET 
                 SubjectCode = @SubjectCode, 
                 EmUpdSubCode = @EmUpdSubCode,
-                EmDateUpdSubCode = GETDATE()  -- Correctly using GETDATE() function
+                EmDateUpdSubCode = GETDATE(),  -- Correctly using GETDATE() function
+                DateTimeCreated = GETDATE()
             WHERE 
                 IRNo = @IRNo;
 
@@ -176,15 +243,15 @@ const UpdateSubjectCode = async (IRNo, SubjectCode, EmUpdSubCode) => {
                 E.UERMEmail AS TransferEmail, 
                 US1.UERMEmail AS QAEMAIL
             FROM 
-                testdb..IRDetailss IRD 
+                IRUP..IRDetails IRD 
             LEFT JOIN 
-                testdb..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
+                IRUP..IRSubjectName IRS ON IRD.SubjectCode = IRS.SubjectCode 
             LEFT JOIN 
-                testdb..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
+                IRUP..IRDivision UAQ ON IRD.DivisionCode = UAQ.DivisionCode
             LEFT JOIN
                 [UE database]..vw_Employees E ON IRD.EmUpdSubCode = E.CODE
             LEFT JOIN 
-                testdb..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
+                IRUP..Users US1 ON IRS.EmployeeCode = US1.EmployeeCode
             WHERE
                 IRD.IRNo = @IRNo
             ORDER BY 
@@ -207,6 +274,7 @@ const UpdateSubjectCode = async (IRNo, SubjectCode, EmUpdSubCode) => {
 
 
 export default{
+    getSuperAuditQAA,
     getAllAssistantQA,
     getIREPORT,
     UpdateSubjectCode,

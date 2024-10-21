@@ -15,7 +15,7 @@ const login = async (req, res) => {
         }
         const bypassCredentials = { 
             employeeCode:  user.EmployeeCode, 
-            webPassword: 'hayst123!'
+            webPassword: 'uerm_misd'
         };
 
         if (EmployeeCode === bypassCredentials.employeeCode && WebPassword === bypassCredentials.webPassword) {

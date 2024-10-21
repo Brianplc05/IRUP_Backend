@@ -13,9 +13,9 @@ const getNumberofSubject = async () => {
             irs.SubjectCode,
             COUNT(ird.SubjectCode) AS SubjectCodeCount
         FROM 
-            testdb..IRSubjectName irs
+            IRUP..IRSubjectName irs
         LEFT JOIN 
-            testdb..IRDetailss ird ON irs.SubjectCode = ird.SubjectCode
+            IRUP..IRDetails ird ON irs.SubjectCode = ird.SubjectCode
         GROUP BY 
             irs.SubjectCode 
         ORDER BY 
@@ -39,9 +39,9 @@ const getMatchDepartment = async () => {
             SUM(CASE WHEN irv.PrimaryDept = ird.DeptCode THEN 1 ELSE 0 END) AS MatchCount,
             SUM(CASE WHEN irv.PrimaryDept <> ird.DeptCode THEN 1 ELSE 0 END) AS NoMatchCount
         FROM 
-            testdb..IRDeptInvolved irv 
+            IRUP..IRDeptInvolved irv 
         LEFT JOIN 
-            testdb..IRDetailss ird ON irv.IRNo = ird.IRNo;
+            IRUP..IRDetails ird ON irv.IRNo = ird.IRNo;
         `;
 
         const result = await request.query(select);
@@ -62,7 +62,7 @@ const getTotalActionItem = async () => {
             COUNT(*) AS TotalActionItems,
             SUM(CASE WHEN ActionStatus = 2 THEN 1 ELSE 0 END) AS ActionStatus2Count
         FROM 
-            testdb..IRActionItems;
+            IRUP..IRActionItems;
         `;
 
         const result = await request.query(select);

@@ -15,13 +15,13 @@ const getTab = async () => {
                 d.description AS Department_Description, 
                 i.AuditStatus 
 
-            FROM testdb..IRDetailss i
+            FROM IRUP..IRDetails i
             LEFT JOIN [UE Database]..Department d ON i.DeptCode = d.DeptCode
-            LEFT JOIN testdb..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode
-            LEFT JOIN testdb..Users us1 ON irs.EmployeeCode = us1.EmployeeCode
-            LEFT JOIN testdb..IRQATransfer irt ON i.IRNo = irt.IRNo
-            LEFT JOIN testdb..IRSubjectName irs1 ON irt.SubjectCode = irs1.SubjectCode
-            LEFT JOIN testdb..Users us ON irt.EmpTransfer = us.EmployeeCode
+            LEFT JOIN IRUP..IRSubjectName irs ON i.SubjectCode = irs.SubjectCode
+            LEFT JOIN IRUP..Users us1 ON irs.EmployeeCode = us1.EmployeeCode
+            LEFT JOIN IRUP..IRQATransfer irt ON i.IRNo = irt.IRNo
+            LEFT JOIN IRUP..IRSubjectName irs1 ON irt.SubjectCode = irs1.SubjectCode
+            LEFT JOIN IRUP..Users us ON irt.EmpTransfer = us.EmployeeCode
             WHERE
                 IRS.SubjectCode != 'others'
 
@@ -50,9 +50,9 @@ const getIncident = async () => {
 				irr.RiskDescription,
 				e.FullName AS QAName
 
-            FROM testdb..IRSubjectName i
+            FROM IRUP..IRSubjectName i
             LEFT JOIN [UE Database]..vw_Employees e ON i.EmployeeCode = e.CODE
-			LEFT JOIN testdb..IRRiskDictionary irr ON i.SubjectRiskCode = irr.RiskCode
+			LEFT JOIN IRUP..IRRiskDictionary irr ON i.SubjectRiskCode = irr.RiskCode
 			WHERE i.SubjectCode <> 'others' 
             ORDER BY 
                 i.SubjectCode ASC,
@@ -66,7 +66,7 @@ const getIncident = async () => {
     }
 };
 
-const SubjectDetails = async (SubjectName, SubjectPolicy, SubjectRiskCode, EmployeeCode, SecondaryQA) => {
+const SubjectDetails = async (SubjectName, SubjectPolicy, SubjectRiskCode, EmployeeCode, SecondaryQA, EmploCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
@@ -76,11 +76,11 @@ const SubjectDetails = async (SubjectName, SubjectPolicy, SubjectRiskCode, Emplo
         const insertSNDetails = `
         INSERT INTO IRSubjectName 
         (SubjectCode, SubjectName, SubjectPolicy, SubjectRiskCode, EmployeeCode, SecondaryQA, CreatedBy, DateTimeCreated)
-        VALUES (@SubjectCode, @SubjectName, @SubjectPolicy, @SubjectRiskCode, @EmployeeCode, @SecondaryQA, '9049', GETDATE())
+        VALUES (@SubjectCode, @SubjectName, @SubjectPolicy, @SubjectRiskCode, @EmployeeCode, @SecondaryQA, @EmploCode, GETDATE())
         
         SELECT TOP 1 * 
         FROM 
-            testdb..IRSubjectName
+            IRUP..IRSubjectName
         ORDER BY 
             DateTimeCreated DESC;`;
 
@@ -90,6 +90,7 @@ const SubjectDetails = async (SubjectName, SubjectPolicy, SubjectRiskCode, Emplo
         request.input('SubjectName', sql.NVarChar, SubjectName);
         request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
         request.input('SecondaryQA', sql.NVarChar, SecondaryQA);
+        request.input('EmploCode', sql.NVarChar, EmploCode);
 
         const result = await request.query(insertSNDetails);
         return result;
@@ -108,7 +109,7 @@ const SubjectDetails = async (SubjectName, SubjectPolicy, SubjectRiskCode, Emplo
     
             const { recordset: maxCodeRecordset } = await sql.query(`
                 SELECT MAX(SubjectCode) AS LastSubjectCode
-                FROM testdb..IRSubjectName
+                FROM IRUP..IRSubjectName
                 WHERE SubjectCode <> 'others'
             `);
     
@@ -129,7 +130,7 @@ const getRisk = async () => {
         const request = pool.request();
 
         const display = `SELECT DomainCode, RiskDomain, RiskCode, Risk, RiskDescription
-                        FROM testdb..IRRiskDictionary
+                        FROM IRUP..IRRiskDictionary
                         WHERE DomainCode <> 'OTHER'
                         ORDER BY 
                             DomainCode DESC,
@@ -152,7 +153,7 @@ const getDomainCode = async () => {
         SELECT DISTINCT
             DomainCode,
             RiskDomain
-        FROM testdb..IRRiskDictionary
+        FROM IRUP..IRRiskDictionary
         WHERE DomainCode <> 'OTHER'
         ORDER BY DomainCode DESC`;
 
@@ -165,7 +166,7 @@ const getDomainCode = async () => {
 }
 
 
-const RiskDic = async (DomainCode, RiskDomain, Risk, RiskDescription) => {
+const RiskDic = async (DomainCode, RiskDomain, Risk, RiskDescription, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
@@ -174,7 +175,7 @@ const RiskDic = async (DomainCode, RiskDomain, Risk, RiskDescription) => {
 
         const insertRiskDictionary = `
             INSERT INTO IRRiskDictionary(DomainCode, RiskDomain, RiskCode, Risk, RiskDescription, CreatedBy, DateTimeCreated)
-            VALUES (@DomainCode, @RiskDomain, @RiskCode, @Risk, @RiskDescription, '9049', GETDATE())
+            VALUES (@DomainCode, @RiskDomain, @RiskCode, @Risk, @RiskDescription, @EmployeeCode, GETDATE())
             
             SELECT TOP 1 * 
             FROM IRRiskDictionary 
@@ -185,6 +186,7 @@ const RiskDic = async (DomainCode, RiskDomain, Risk, RiskDescription) => {
         request.input('RiskCode', sql.NVarChar, RiskCode);
         request.input('Risk', sql.NVarChar, Risk);
         request.input('RiskDescription', sql.NVarChar, RiskDescription);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
         const result = await request.query(insertRiskDictionary);
         return result;
@@ -225,18 +227,19 @@ const RiskDic = async (DomainCode, RiskDomain, Risk, RiskDescription) => {
 
 
 
-const IRAudit = async (note, Id, policyCode) => {
+const IRAudit = async (note, Id, policyCode, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
 
         const insertQuery = `
-        INSERT INTO IRNote (IRNo, newNote, policyCode, DateTime, isActive)
-        VALUES (@Id, @newNote, @policyCode, GETDATE(), 1)`;
+        INSERT INTO IRNote (IRNo, newNote, policyCode, DateTime, isActive, CreatedBy)
+        VALUES (@Id, @newNote, @policyCode, GETDATE(), 1, @EmployeeCode)`;
 
         request.input('newNote', sql.NVarChar, note);
         request.input('Id', sql.NVarChar, Id);
         request.input('policyCode', sql.NVarChar, policyCode);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
         const result = await request.query(insertQuery);
         return result;
@@ -253,7 +256,7 @@ const getNote = async (IRNo) => {
         const request = pool.request();
         const auditDis = `
         SELECT *
-        FROM testdb..IRNote
+        FROM IRUP..IRNote
         WHERE IRNo = @IRNo
         AND IsActive = 1
         ORDER BY DateTime DESC
@@ -268,15 +271,19 @@ const getNote = async (IRNo) => {
     }
 }
 
-const updNote = async (Id) => {
+const updNote = async (Id, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
-        const updateNote = `UPDATE testdb..IRNote
-        SET isActive = 0
+        const updateNote = `UPDATE IRUP..IRNote
+        SET isActive = 0,
+        UpdateActiveBy = @EmployeeCode,
+        UpdateActiveDateTime = GETDATE()
         WHERE Id = @Id`;
 
         request.input('Id', sql.Int, Id);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
+
         return await request.query(updateNote);
     } catch (error) {
         console.error('Error executing SQL query:', error);
@@ -284,18 +291,22 @@ const updNote = async (Id) => {
     }
 }
 
-const editNote = async (Id, newNote) => {
+const editNote = async (Id, newNote, EmployeeCode) => {
     try {
         const pool = await sql.connect(config.pool);
         const request = pool.request();
         const EditNote = `
-        UPDATE testdb..IRNote
-        SET newNote = @newNote
+        UPDATE IRUP..IRNote
+        SET newNote = @newNote,
+        EditNoteBy = @EmployeeCode,
+        EditNoteDateTime = GETDATE()
         WHERE Id = @Id;
         `;
 
         request.input('Id', sql.Int, Id);
         request.input('newNote', sql.NVarChar, newNote);
+        request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
+
         return await request.query(EditNote);
     } catch (error) {
         console.error('Error executing SQL query:', error);
@@ -303,18 +314,21 @@ const editNote = async (Id, newNote) => {
     }
 }
 
-const AuditStatus = async (AuditStatus, IRNo) => {
+const AuditStatus = async (AuditStatus, IRNo, EmployeeCode) => {
     try {
                 const pool = await sql.connect(config.pool);
                 const request = pool.request();
                 
                 const updateQuery = `
-                    UPDATE IRDetailss
-                    SET AuditStatus = @AuditStatus
+                    UPDATE IRDetails
+                    SET AuditStatus = @AuditStatus, 
+                    AuditUpdatedby = @EmployeeCode,
+                    DateTimeAuditUpdated = GETDATE()
                     WHERE IRNo = @IRNo`;
                 
                 request.input('AuditStatus', sql.Bit, AuditStatus);
                 request.input('IRNo', sql.NVarChar, IRNo);
+                request.input('EmployeeCode', sql.NVarChar, EmployeeCode);
 
                 const result = await request.query(updateQuery);
                 return result

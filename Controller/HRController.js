@@ -58,9 +58,13 @@ const FormHRAct = async (req, res) => {
 
 const FormHRN = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const IRNo = req.body.iRNo;
         const newHRNote = req.body.newHRNote;
-        const result = await model.HRNote(newHRNote, IRNo);
+        const result = await model.HRNote(newHRNote, IRNo, EmployeeCode);
         if (result.rowsAffected === 0) {
             return res.status(403).json({ message: 'Failed to create new note' });
         }
@@ -73,9 +77,13 @@ const FormHRN = async (req, res) => {
 
 const FormHRNotes = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const IRNo = req.body.iRNo;
         const newHRNote = req.body.newHRNote;
-        const result = await model.HRNotes(newHRNote, IRNo);
+        const result = await model.HRNotes(newHRNote, IRNo, EmployeeCode);
         if (result.rowsAffected === 0) {
             return res.status(403).json({ message: 'Failed to create new note' });
         }
@@ -88,9 +96,13 @@ const FormHRNotes = async (req, res) => {
 
 const FormFinancialLiability = async (req, res) => {
     try {
+        const EmployeeCode = req.user.EmployeeCode;
+        if (!EmployeeCode) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
         const iRNo = req.body.IRNo;
         const FinancialLiability = req.body.FinancialLiability;
-        const result = await model.HRFinLiability(iRNo, FinancialLiability);
+        const result = await model.HRFinLiability(iRNo, FinancialLiability, EmployeeCode);
 
         if (result.rowsAffected[0] === 0) {
             return res.status(403).json({ message: 'Failed to update FinancialLiability' });

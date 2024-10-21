@@ -2,15 +2,21 @@ import model from "../Models/AssitantQAModel.js";
 import util from "../Helpers/helper.js";
 
 const FormAssistantQASub = async (req, res) => {
-    try{
-        const code = req.user.EmployeeCode;
-        if (!code) {
-                return res.status(401).json({ message: "Unauthorized" });
+    try {
+        const { EmployeeCode: code, DeptCode: dept } = req.user;
+        if (code) {
+            const result = await model.getAllAssistantQA(code);
+            if (result?.recordset?.length) {
+                return res.status(200).json(result.recordset);
+            }
         }
-        const result = await model.getAllAssistantQA(code)
-        return res.status(200).json(result.recordset);
-    }catch (error) {
-        res.status(500).json({ msg: `Error` });
+        if (dept === '5026') {
+            const SuperAuditQAAResult = await model.getSuperAuditQAA();
+            return res.status(200).json(SuperAuditQAAResult.recordset);
+        }
+        return res.status(400).json({ msg: "Invalid request: No Employee Code or unsupported Department Code." });
+    } catch (error) {
+        res.status(500).json({ msg: `Error: ${error.message}` });
     }
 };
 
@@ -48,27 +54,37 @@ const FormDisDivision = async (req, res) => {
 
 const FormUpdateDivCode = async (req, res) => {
     try {
-        const { IRNo, DivisionCode } = req.body.params;
-        const result = await model.UpdateDivisionCode(IRNo, DivisionCode);
+        const { IRNo, DivisionSubCode } = req.body;
+        const result = await model.UpdateDivisionCode(IRNo, DivisionSubCode);
         const records = result.recordset;
 
+        console.log('CHECK DATA OF DIVISION', IRNo, DivisionSubCode)
+
         if( records && records.length > 0){
-            const { IRNo, SubjectBriefDes, TransferQAName, TransferQAEmail, TransferQAAName, TransferQAAEmail} = records[0];
+            const { IRNo, SubjectBriefDes, QANameOwner, QAEmailOwner, QAANameOwner, QAAEmailOwner, TransferQAName, TransferQAEmail, TransferQAAName, TransferQAAEmail} = records[0];
             if(TransferQAName){
                 const emailContent = {
                     subject: "INCIDENT REPORT",
                     header: `INCIDENT REPORT DETAILS<br />`,
-                    content: `Good day!<br>
-                            Mr./Ms. <b>${TransferQAName}</b>,<br>
-                            <b>${TransferQAEmail}</b><br>
-                            I wanted to inform you about an incident report that requires your attention. 
-                            Based on the details of the incident, it appears that your department is responsible for addressing this issue.<br><br>
-                            
-                            <b>Incident Report Details:</b>${IRNo}<br>
-                            This is a brief description of the incident: <b>${SubjectBriefDes}</b>
+                    content: `Good Day!<br>
+                            Dear <b>${TransferQAName},</b><br><br>
+                            I am writing to formally transfer the incident report that requires your attention.
+                            After conducting a preliminary review, it has been determined that your expertise 
+                            and oversight are required to further investigate and address this matter.
                             <br><br>
-                        
-                            Thank you for your prompt attention to this matter.<br>
+                            
+                            <b>Incident Report Details:</b><br>
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Brief Description of the incident:</b> ${SubjectBriefDes}
+                            <br><br>
+
+                            Thank you for your prompt attention to this matter.<br><br>
+                            <b>${TransferQAEmail}</b><br><br>
+
+                            <b>Transferred by:</b><br>
+                            <b>QAIC NAME:</b>${QANameOwner}<br>
+                            <b>QAIC EMAIL:</b>${QAEmailOwner}
                             `,
                     email: 'jppalacio@uerm.edu.ph',
                     name: 'JOHN BRIAN'
@@ -80,17 +96,25 @@ const FormUpdateDivCode = async (req, res) => {
                 const emailContent = {
                     subject: "INCIDENT REPORT",
                     header: `INCIDENT REPORT DETAILS<br />`,
-                    content: `Good day!<br>
-                            Mr./Ms. <b>${TransferQAAName}</b>,<br>
-                            <b>${TransferQAAEmail}</b><br>
-                            I wanted to inform you about an incident report that requires your attention. 
-                            Based on the details of the incident, it appears that your department is responsible for addressing this issue.<br><br>
-                            
-                            <b>Incident Report Details:</b>${IRNo}<br>
-                            This is a brief description of the incident: <b>${SubjectBriefDes}</b>
+                    content: `Good Day!<br>
+                            Dear <b>${TransferQAAName},</b><br><br>
+                            I am writing to formally transfer the incident report that requires your attention.
+                            After conducting a preliminary review, it has been determined that your expertise 
+                            and oversight are required to further investigate and address this matter.
                             <br><br>
-                        
+                            
+                            <b>Incident Report Details:</b><br>
+                            <b>Incident Report Number:</b> ${IRNo}.
+                            <br>
+                            <b>Brief Description of the incident:</b> ${SubjectBriefDes}
+                            <br><br>
+
                             Thank you for your prompt attention to this matter.<br>
+                            <b>${TransferQAAEmail}</b><br><br>
+
+                            <b>Transferred by:</b><br>
+                            <b>QAA NAME:</b>${QAANameOwner}<br>
+                            <b>QAA EMAIL:</b>${QAAEmailOwner}<br>
                             `,
                     email: 'jppalacio@uerm.edu.ph',
                     name: 'JOHN BRIAN'
@@ -111,10 +135,11 @@ const FormUpdateDivCode = async (req, res) => {
 const FormUpdateSubCode = async (req, res) => {
     try {
         const EmUpdSubCode = req.user.EmployeeCode;
+        const { IRNo, SubjectCode } = req.body;
+
         if (!EmUpdSubCode) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-        const { IRNo, SubjectCode } = req.body.params;
         const result = await model.UpdateSubjectCode(IRNo, SubjectCode, EmUpdSubCode);
 
         const records = result.recordset;
@@ -140,7 +165,7 @@ const FormUpdateSubCode = async (req, res) => {
                 email: 'jppalacio@uerm.edu.ph',
                 name: 'JOHN BRIAN'
             };
-            await util.sendEmail(emailContent);
+            // await util.sendEmail(emailContent);
         } else {
             res.status(404).json({ message: 'No records found to update or send email.' });
             return;
